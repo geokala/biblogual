@@ -1,0 +1,102 @@
+#! /usr/bin/env python3
+"""Generate pages for a static blog."""
+from html import escape
+
+# pylint: disable=C0301
+POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>BLOG TITLE</title>
+<link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
+</head>
+<body>
+<div class="navbar navbar-dark bg-dark">
+<a id="home-link" href="/" class="navbar-brand"><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="/" class="navbar-brand"><strong>NEXT POST</strong></a>
+<a id="home-link" href="/" class="navbar-brand"><strong>HOMEPAGE</strong></a>
+</div>
+<div class="container-fluid clearfix">
+{section1}
+{section2}
+</div>
+</body>
+</html>'''
+# pylint: enable=C0301
+
+LANGUAGE_MAPPINGS = {
+    'dk': {
+        'flag': '🇩🇰',
+    },
+    'en': {
+        'flag': '🇬🇧',
+    },
+}
+
+
+class Section:  # pylint: disable=R0903
+    """A section of a blog post."""
+    def __init__(self, section_data: dict):
+        _validate_section_data(section_data)
+        self.title = escape(section_data['title'])
+        self.text = escape(section_data['text'])
+        self.language = section_data['language']
+        self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
+
+    def get_section_html(self, first: bool = False) -> str:
+        """Get this section's HTML."""
+        divider='' if first else 'border-left ml-3 pl-3 '
+        return (
+            f'<div class="{divider}float-md-left">\n'
+            f'<h2>{self.flag}{self.title}</h2>\n'
+            f'<p>{self.text}\n'
+            '</div>'
+        )
+
+
+class InvalidSectionData(Exception):
+    """Raised when attempting to generate a section from invalid data."""
+
+
+def _validate_section_data(section_data: dict):
+    """Generate a Section if given valid section data."""
+    required_keys = ['title', 'text', 'language']
+    all_keys = required_keys
+
+    if (
+        any(key not in all_keys for key in section_data)
+        or not all(key in section_data for key in required_keys)
+    ):
+        valid = ','.join(sorted(all_keys))
+        req = ','.join(sorted(required_keys))
+        contained = ','.join(sorted(section_data))
+        raise InvalidSectionData(
+            f'The section data may contain the following keys: {valid}\n'
+            f'The section data must contain the following keys: {req}\n'
+            f'The section contained: {contained}'
+        )
+
+    if section_data['language'] not in LANGUAGE_MAPPINGS:
+        raise InvalidSectionData(
+            'Language must be one of: {}'.format(  # pylint: disable=C0209
+                ','.join(LANGUAGE_MAPPINGS.keys()),
+            )
+        )
+
+
+def prepare_blog(section1: Section, section2: Section) -> str:
+    """Generate the text of the blog page."""
+    return POST_TEMPLATE.format(
+        section1=section1.get_section_html(first=True),
+        section2=section2.get_section_html(),
+    )
+
+
+if __name__ == '__main__':
+    dansk = Section({'title': 'Blogen eksempel',
+                     'text': 'Her jeg putter indholdet af i dags blogindlæg.',
+                     'language': 'dk'})
+    english = Section({'title': 'The blog example',
+                       'text': "Here I put the content of today's blog post.",
+                       'language': 'en'})
+
+    print(prepare_blog(dansk, english))
