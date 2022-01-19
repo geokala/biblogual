@@ -1,6 +1,9 @@
 #! /usr/bin/env python3
 """Generate pages for a static blog."""
 from html import escape
+import json
+import os
+import typing
 
 # pylint: disable=C0301
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -89,20 +92,38 @@ def _validate_section_data(section_data: dict):
         raise InvalidSectionData('\n'.join(errors))
 
 
-def prepare_blog(section1: Section, section2: Section) -> str:
-    """Generate the text of the blog page."""
+def prepare_post(section1: Section, section2: Section) -> str:
+    """Generate the HTML of a blog post."""
     return POST_TEMPLATE.format(
         section1=section1.get_section_html(first=True),
         section2=section2.get_section_html(),
     )
 
 
-if __name__ == '__main__':
-    dansk = Section({'title': 'Blogen eksempel',
-                     'text': 'Her jeg putter indholdet af i dags blogindlæg.',
-                     'language': 'dk'})
-    english = Section({'title': 'The blog example',
-                       'text': "Here I put the content of today's blog post.",
-                       'language': 'en'})
+class InvalidPostData(Exception):
+    """Raised when the data for a post is not as expected."""
 
-    print(prepare_blog(dansk, english))
+
+def load_posts(data_dir: str) -> typing.List[typing.List[Section]]:
+    """Load post data from a directory."""
+    posts = []
+    for post_file in os.listdir(data_dir):
+        path = os.path.join(data_dir, post_file)
+        with open(path, encoding='utf-8') as post_handle:
+            post_data = json.load(post_handle)
+        if len(post_data) != 2:
+            raise InvalidPostData(f'2 sections were expected in {path}')
+        try:
+            posts.append([
+                Section(section)
+                for section in sorted(post_data, key=lambda x: x['language'])
+            ])
+        except InvalidSectionData as err:
+            raise InvalidPostData(  # pylint: disable=W0707
+                f'Post contained invalid section data: {err}')
+    return posts
+
+if __name__ == '__main__':
+    posts_data = load_posts('test_posts')
+    for post in posts_data:
+        print(prepare_post(*post))
