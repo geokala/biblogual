@@ -62,6 +62,8 @@ def _validate_section_data(section_data: dict):
     required_keys = ['title', 'text', 'language']
     all_keys = required_keys
 
+    errors = []
+
     if (
         any(key not in all_keys for key in section_data)
         or not all(key in section_data for key in required_keys)
@@ -69,18 +71,22 @@ def _validate_section_data(section_data: dict):
         valid = ','.join(sorted(all_keys))
         req = ','.join(sorted(required_keys))
         contained = ','.join(sorted(section_data))
-        raise InvalidSectionData(
+        errors.append(
             f'The section data may contain the following keys: {valid}\n'
             f'The section data must contain the following keys: {req}\n'
             f'The section contained: {contained}'
         )
 
     if section_data['language'] not in LANGUAGE_MAPPINGS:
-        raise InvalidSectionData(
-            'Language must be one of: {}'.format(  # pylint: disable=C0209
+        errors.append(
+            'Language was {}, but must be one of: {}'.format(  # pylint: disable=C0209
+                section_data['language'],
                 ','.join(LANGUAGE_MAPPINGS.keys()),
             )
         )
+
+    if errors:
+        raise InvalidSectionData('\n'.join(errors))
 
 
 def prepare_blog(section1: Section, section2: Section) -> str:
