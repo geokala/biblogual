@@ -12,7 +12,9 @@ Objectives:
 
 Steps:
     1. Create main page with with 2x test content.
-2. Determine directory structure to access single posts. (json containing content maybe, though that means using python to parse; shell parseable might be nicer?; handle images later)
+    2. Determine directory structure to access single posts. (json containing content maybe, though that means using python to parse; shell parseable might be nicer?; handle images later)
 3. Determine how to update last post- maybe surround it in html comments to make it easy to sed.
-4. Make script.
+    4. Make script.
 5. Handle images.
+6. Handle links.
+7. Mood.
