@@ -108,22 +108,34 @@ def load_posts(data_dir: str) -> typing.List[typing.List[Section]]:
     """Load post data from a directory."""
     posts = []
     for post_file in os.listdir(data_dir):
+        name = os.path.splitext(post_file)[0]
         path = os.path.join(data_dir, post_file)
         with open(path, encoding='utf-8') as post_handle:
             post_data = json.load(post_handle)
         if len(post_data) != 2:
             raise InvalidPostData(f'2 sections were expected in {path}')
         try:
-            posts.append([
-                Section(section)
-                for section in sorted(post_data, key=lambda x: x['language'])
-            ])
+            posts.append(
+                prepare_post(
+                    *[
+                        Section(section)
+                        for section in sorted(post_data,
+                                              key=lambda x: x['language'])
+                    ]
+                )
+            )
         except InvalidSectionData as err:
             raise InvalidPostData(  # pylint: disable=W0707
                 f'Post contained invalid section data: {err}')
     return posts
 
+
+def write_html(posts: typing.List[
+
+
 if __name__ == '__main__':
+    SOURCE_DIR = 'test_posts'
+    DEST_DIR = 'test_html'
     posts_data = load_posts('test_posts')
     for post in posts_data:
         print(prepare_post(*post))
