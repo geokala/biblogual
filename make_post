@@ -14,8 +14,8 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="home-link" href="/" class="navbar-brand"><strong>PREVIOUS POST</strong></a>
-<a id="home-link" href="/" class="navbar-brand"><strong>NEXT POST</strong></a>
+<a id="home-link" href="{prev_post}" {prev_attrs}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="{next_post}" {next_attrs}><strong>NEXT POST</strong></a>
 <a id="home-link" href="/" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
@@ -45,19 +45,45 @@ class Section:  # pylint: disable=R0903
         self.language = section_data['language']
         self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
 
-    def get_section_html(self, first: bool = False) -> str:
+    def get_section_html(self) -> str:
         """Get this section's HTML."""
-        divider='' if first else 'border-left ml-3 pl-3 '
         return (
-            f'<div class="{divider}float-md-left">\n'
+            '<div class="ml-5 float-md-left">\n'
             f'<h2>{self.flag}{self.title}</h2>\n'
             f'<p>{self.text}\n'
             '</div>'
         )
 
 
+class Post:  # pylint: disable=R0903
+    """A blog post."""
+    def __init__(self, sections: typing.List[Section],
+                 next_path: typing.Optional[str],
+                 prev_path: typing.Optional[str]):
+        self.sections = sections
+        self.next_path = next_path or '#'
+        self.prev_path = prev_path or '#'
+
+    def get_post_html(self) -> str:
+        """Get this post's HTML."""
+        return POST_TEMPLATE.format(
+            section1=self.sections[0].get_section_html(),
+            section2=self.sections[1].get_section_html(),
+            prev_post=self.prev_path,
+            prev_attrs=_get_header_link_attrs(self.prev_path),
+            next_post=self.next_path,
+            next_attrs=_get_header_link_attrs(self.next_path),
+        )
+
 class InvalidSectionData(Exception):
     """Raised when attempting to generate a section from invalid data."""
+
+
+def _get_header_link_attrs(target):
+    """Get the attributes to assign to a header link based on the target."""
+    if target == '#':
+        return 'style="cursor:default" class="text-muted navbar-brand"'
+    return 'class="navbar-brand"'
 
 
 def _validate_section_data(section_data: dict):
@@ -92,50 +118,58 @@ def _validate_section_data(section_data: dict):
         raise InvalidSectionData('\n'.join(errors))
 
 
-def prepare_post(section1: Section, section2: Section) -> str:
-    """Generate the HTML of a blog post."""
-    return POST_TEMPLATE.format(
-        section1=section1.get_section_html(first=True),
-        section2=section2.get_section_html(),
-    )
-
-
 class InvalidPostData(Exception):
     """Raised when the data for a post is not as expected."""
 
 
-def load_posts(data_dir: str) -> typing.List[typing.List[Section]]:
+def _get_post_data_path(post_file: str, data_dir: str) -> str:
+    path = os.path.join(data_dir, post_file)
+    return path
+
+
+def _get_post_html_path(post_file: str, html_dir: str) -> str:
+    name = os.path.splitext(post_file)[0]
+    path = os.path.join(html_dir, name + '.html')
+    return path
+
+
+def load_posts(data_dir: str, html_dir: str) -> typing.List[Post]:
     """Load post data from a directory."""
     posts = []
-    for post_file in os.listdir(data_dir):
-        name = os.path.splitext(post_file)[0]
-        path = os.path.join(data_dir, post_file)
-        with open(path, encoding='utf-8') as post_handle:
+    post_data_files = os.listdir(data_dir)
+    for idx, post_file in enumerate(post_data_files):
+        post_data_path = _get_post_data_path(post_file, data_dir)
+        prev_post = None
+        next_post = None
+        if idx > 0:
+            prev_post = _get_post_html_path(post_data_files[idx - 1],
+                                            html_dir)
+        if idx < (len(post_data_files) - 1):
+            next_post = _get_post_html_path(post_data_files[idx + 1],
+                                            html_dir)
+        with open(post_data_path, encoding='utf-8') as post_handle:
             post_data = json.load(post_handle)
         if len(post_data) != 2:
-            raise InvalidPostData(f'2 sections were expected in {path}')
+            raise InvalidPostData(
+                f'2 sections were expected in {post_data_path}')
         try:
-            posts.append(
-                prepare_post(
-                    *[
-                        Section(section)
-                        for section in sorted(post_data,
-                                              key=lambda x: x['language'])
-                    ]
-                )
-            )
+            posts.append(Post(
+                sections=[
+                    Section(s)
+                    for s in sorted(post_data, key=lambda x: x['language'])
+                ],
+                next_path=next_post,
+                prev_path=prev_post,
+            ))
         except InvalidSectionData as err:
             raise InvalidPostData(  # pylint: disable=W0707
                 f'Post contained invalid section data: {err}')
     return posts
 
 
-def write_html(posts: typing.List[
-
-
 if __name__ == '__main__':
     SOURCE_DIR = 'test_posts'
     DEST_DIR = 'test_html'
-    posts_data = load_posts('test_posts')
+    posts_data = load_posts(SOURCE_DIR, DEST_DIR)
     for post in posts_data:
-        print(prepare_post(*post))
+        print(post.get_post_html())
