@@ -1,0 +1,3 @@
+#! /usr/bin/env bash
+pylint make_post
+mypy make_post
