@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 """Generate pages for a static blog."""
+from hashlib import sha256
 from html import escape
 import json
 import os
@@ -33,6 +34,11 @@ LANGUAGE_MAPPINGS = {
     'en': {
         'flag': '🇬🇧',
     },
+}
+EXPECTED_BOOTSTRAP_FILES = {
+    'bootstrap.min.css': '4ffcc598ee6cff4692c1cea272cd8a2f195f6dec32473e94370d6cdcfa5fe601',  # pylint: disable=C0301
+    'bootstrap-grid.min.css': '158cf68fff05fa7b67dab1734752e67e4d4dcf08a3bbb3e046d5cd9cbc3bd86b',  # pylint: disable=C0301
+    'bootstrap-reboot.min.css': 'cd3d5950dfe3d62fda39a009a26977aeef162d133c4a264ae5812bfb5489c5b8',  # pylint: disable=C0301
 }
 
 
@@ -172,15 +178,12 @@ def load_posts(data_dir: str) -> typing.List[Post]:
     return posts
 
 
-class UpdatePostsError(Exception):
+class InvalidHTMLDir(Exception):
     """Raised when post update cannot be performed."""
 
 
 def update_posts(posts: typing.List[Post], html_dir: str):
     """Add new posts and update any existing posts that need updating."""
-    if not os.path.isdir(html_dir):
-        raise UpdatePostsError(
-            f'HTML destination dir does not exist: {html_dir}')
 
     updated = 0
     for post in posts:
@@ -200,8 +203,43 @@ def update_posts(posts: typing.List[Post], html_dir: str):
     print(f'Updated {updated}/{len(posts)} posts.')
 
 
+def check_html_dir_valid(html_dir: str):
+    """Check that the targeted HTML dir is valid."""
+    print('Checking HTML dir exists')
+    if not os.path.isdir(html_dir):
+        raise InvalidHTMLDir(
+            f'HTML destination dir does not exist: {html_dir}')
+
+    print('Validating bootstrap files')
+    bootstrap_path = os.path.join(html_dir, 'bootstrap')
+    bootstrap_files = {}
+    for bs_file in os.listdir(bootstrap_path):
+        bs_path = os.path.join(bootstrap_path, bs_file)
+        with open(bs_path, 'rb') as bs_handle:
+            bootstrap_files[bs_file] = sha256(
+                bs_handle.read()).hexdigest()
+    if bootstrap_files != EXPECTED_BOOTSTRAP_FILES:
+        raise InvalidHTMLDir(
+            'Expected bootstrap files not found.\n'  # pylint: disable=C0209
+            'Expected to see the following files with listed SHA256 hashes:\n'
+            '{expected_output}\n'
+            'The following files were seen:\n'
+            '{seen_output}'.format(
+                expected_output='\n'.join(
+                    ' '.join(fn_hash)
+                    for fn_hash in EXPECTED_BOOTSTRAP_FILES.items()
+                ),
+                seen_output='\n'.join(
+                    ' '.join(fn_hash)
+                    for fn_hash in bootstrap_files.items()
+                ),
+            )
+        )
+
+
 if __name__ == '__main__':
     SOURCE_DIR = 'test_posts'
     DEST_DIR = 'test_html'
     posts_data = load_posts(SOURCE_DIR)
+    check_html_dir_valid(DEST_DIR)
     update_posts(posts_data, DEST_DIR)
