@@ -1,1 +1,1 @@
-[{"title": "Blogen eksempel", "text": "Her jeg putter indholdet af i dags blogindlæg.", "language": "dk"},{"title": "The blog example", "text": "Here I put the content of today\"s blog post.", "language": "en"}]
+[{"title": "Blogen eksempel", "mood": "glad", "text": "Her jeg putter indholdet af i dags blogindlæg.", "language": "dk"},{"title": "The blog example", "mood": "happy", "text": "Here I put the content of today\"s blog post.", "language": "en"}]
