@@ -73,6 +73,7 @@ class Section:  # pylint: disable=R0903
         self.mood = escape(section_data.get('mood', ''))
         self.language = section_data['language']
         self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
+        self.date = escape(section_data['date'])
 
     def get_html(self) -> str:
         """Get this section's HTML."""
@@ -89,7 +90,8 @@ class Section:  # pylint: disable=R0903
             '<div class="ml-5 float-md-left">\n'
             f'<h2>{self.flag}{self.title}</h2>\n'
             f'{mood_string}'
-            f'<p>{self.text}\n'
+            f'<p>{self.text}</p>\n'
+            f'<small>{self.date}</small>'
             '</div>'
         )
 
@@ -134,7 +136,7 @@ def _get_header_link_attrs(target):
 
 def _validate_section_data(section_data: dict):
     """Generate a Section if given valid section data."""
-    required_keys = ['title', 'text', 'language']
+    required_keys = ['title', 'text', 'language', 'date']
     optional_keys = ['mood']
     all_keys = required_keys + optional_keys
 
