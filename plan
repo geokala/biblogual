@@ -5,7 +5,7 @@ Objectives:
     - Include a 'mood'.
     - Include a title.
 - Image can be added to the post (will appear at top).
-- Links can be added to the post (will appear at the bottom).
+    - Links can be added to the post (will appear at the bottom).
 - Index page to find all posts (updated on each post).
     - Update last post to point to current post when new post added.
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
@@ -16,5 +16,5 @@ Steps:
     3. Determine how to update last post- maybe surround it in html comments to make it easy to sed.
     4. Make script.
 5. Handle images.
-6. Handle links.
+    6. Handle links.
     7. Mood.

@@ -5,7 +5,6 @@ from html import escape
 import json
 import os
 import typing
-from urllib.parse import quote
 
 # pylint: disable=C0301
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -67,7 +66,9 @@ MOOD_EMOJI_MAPPINGS = {
 
 class Section:  # pylint: disable=R0903
     """A section of a blog post."""
-    def __init__(self, section_data: dict):
+    def __init__(self,
+                 section_data: dict,
+                 link_urls: typing.Optional[typing.List[str]]):
         _validate_section_data(section_data)
         self.title = escape(section_data['title'])
         self.text = escape(section_data['text'])
@@ -75,11 +76,18 @@ class Section:  # pylint: disable=R0903
         self.language = section_data['language']
         self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
         self.date = escape(section_data['date'])
-        self.links = [(quote(link), escape(description))
-                      for link, description
-                      in section_data.get('links', {}).items()]
-# TODO: links should be stored at post level
-# TODO: Descriptions should be stored at section level and have same length at links
+        self.links = []
+        if link_urls:
+            link_descriptions = [
+                escape(desc) for desc in section_data.get('links', [])]
+            if len(link_urls) != len(link_descriptions):
+                raise InvalidSectionData(
+                    'Sections must have as many link descriptions as there '
+                    'are link urls.\n'
+                    f'Link descriptions: {link_descriptions}'
+                    f'Link urls: {link_urls}'
+                )
+            self.links = list(zip(link_urls, link_descriptions))
 
     def get_html(self) -> str:
         """Get this section's HTML."""
@@ -92,17 +100,20 @@ class Section:  # pylint: disable=R0903
             if mood_emoji_name_mapping:
                 emoji = MOOD_EMOJI_MAPPINGS[mood_emoji_name_mapping] + ' '
             mood_string = f'<small>{mood}: {emoji}{self.mood}</small>\n'
-        links_text = '\n'.join([
-            f'<a href="{link}">{description</a><br />'
-            for link, description in self.links
-        ])
+        if self.links:
+            links_text = '\n'.join(['Links:<br />'] + [
+                f'<a href="{link}">{description}</a><br />'
+                for link, description in self.links
+            ] + ['<br />'])
+        else:
+            links_text = ''
         return (
             '<div class="ml-5 float-md-left">\n'
             f'<h2>{self.flag}{self.title}</h2>\n'
             f'{mood_string}'
             f'<p>{self.text}</p>\n'
+            f'{links_text}'
             f'<small>{self.date}</small>\n'
-            f'{links_text}\n'
             '</div>'
         )
 
@@ -206,14 +217,15 @@ def load_posts(data_dir: str) -> typing.List[Post]:
             next_post = _get_post_html_filename(post_data_files[idx + 1])
         with open(post_data_path, encoding='utf-8') as post_handle:
             post_data = json.load(post_handle)
-        if len(post_data) != 2:
+        if len(post_data['sections']) != 2:
             raise InvalidPostData(
                 f'2 sections were expected in {post_data_path}')
         try:
             posts.append(Post(
                 sections=[
-                    Section(s)
-                    for s in sorted(post_data, key=lambda x: x['language'])
+                    Section(s, link_urls=post_data.get('links'))
+                    for s in sorted(post_data['sections'],
+                                    key=lambda x: x['language'])
                 ],
                 next_path=next_post,
                 prev_path=prev_post,
