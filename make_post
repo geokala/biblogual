@@ -322,6 +322,14 @@ def update_file_if_needed(expected_content: str, path: str):
     return True
 
 
+def build_year_page(year_posts: typing.List[Post], year: str) -> Year:
+    return year_post
+
+
+def build_index_page(years: typing.List[Year]) -> str:
+    return index_html
+
+
 def update_posts(posts: typing.List[Post], html_dir: str):
     """Add new posts and update any existing posts that need updating."""
 
@@ -331,8 +339,12 @@ def update_posts(posts: typing.List[Post], html_dir: str):
         html_path = post.get_html_path(html_dir)
         if update_file_if_needed(html_content, html_path):
             updated += 1
-
     print(f'Updated {updated}/{len(posts)} posts.')
+
+    updated_years = 0
+    # TODO: years
+
+    # TODO: index
 
 
 def check_html_dir_valid(html_dir: str):
