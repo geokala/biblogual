@@ -7,6 +7,7 @@ import json
 import os
 import typing
 
+# TODO: BLOG TITLE needs to have the actual title set from somewhere...
 # pylint: disable=C0301
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -24,6 +25,26 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 {section1}
 {section2}
 </div>
+</body>
+</html>'''
+INDEX_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>BLOG TITLE</title>
+<link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
+</head>
+<body>
+{year_links}
+</body>
+</html>'''
+YEAR_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>BLOG TITLE - {year}</title>
+<link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
+</head>
+<body>
+{post_links}
 </body>
 </html>'''
 # pylint: enable=C0301
@@ -99,7 +120,7 @@ class Section:  # pylint: disable=R0903
     """A section of a blog post."""
     def __init__(self,
                  section_data: dict,
-                 date: str,
+                 date: datetime,
                  link_urls: typing.Optional[typing.List[str]]):
         _validate_section_data(section_data)
         self.title = escape(section_data['title'])
@@ -122,7 +143,6 @@ class Section:  # pylint: disable=R0903
             self.links = list(zip(link_urls, link_descriptions))
 
     def _get_date_string(self, date):
-        date = datetime.strptime(date, '%Y-%m-%d')
         month = MONTH_MAPPINGS[self.language][date.month]
         return f'{date.year} {month} {date.day}'
 
@@ -157,14 +177,17 @@ class Section:  # pylint: disable=R0903
 
 class Post:  # pylint: disable=R0903
     """A blog post."""
-    def __init__(self, sections: typing.List[Section],
+    def __init__(self,  # pylint: disable=R0913
+                 sections: typing.List[Section],
                  html_filename: str,
+                 date: datetime,
                  next_path: typing.Optional[str],
                  prev_path: typing.Optional[str]):
         self.sections = sections
         self.html_filename = html_filename
         self.next_path = next_path or '#'
         self.prev_path = prev_path or '#'
+        self.date = date
 
     def get_html(self) -> str:
         """Get this post's HTML."""
@@ -254,6 +277,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
             next_post = _get_post_html_filename(post_data_files[idx + 1])
         with open(post_data_path, encoding='utf-8') as post_handle:
             post_data = json.load(post_handle)
+        date = datetime.strptime(post_data['date'], '%Y-%m-%d')
         if len(post_data['sections']) != 2:
             raise InvalidPostData(
                 f'2 sections were expected in {post_data_path}')
@@ -261,7 +285,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
             posts.append(Post(
                 sections=[
                     Section(s,
-                            date=post_data['date'],
+                            date=date,
                             link_urls=post_data.get('links'))
                     for s in sorted(post_data['sections'],
                                     key=lambda x: x['language'])
@@ -269,6 +293,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
                 next_path=next_post,
                 prev_path=prev_post,
                 html_filename=_get_post_html_filename(post_file),
+                date=date,
             ))
         except InvalidSectionData as err:
             raise InvalidPostData(  # pylint: disable=W0707
