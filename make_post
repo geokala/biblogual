@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 """Generate pages for a static blog."""
+from datetime import datetime
 from hashlib import sha256
 from html import escape
 import json
@@ -37,23 +38,48 @@ LANGUAGE_MAPPINGS = {
         'mood': 'Mood',
     },
 }
-EXPECTED_BOOTSTRAP_FILES = {
-    'bootstrap.min.css': '4ffcc598ee6cff4692c1cea272cd8a2f195f6dec32473e94370d6cdcfa5fe601',  # pylint: disable=C0301
-    'bootstrap-grid.min.css': '158cf68fff05fa7b67dab1734752e67e4d4dcf08a3bbb3e046d5cd9cbc3bd86b',  # pylint: disable=C0301
-    'bootstrap-reboot.min.css': 'cd3d5950dfe3d62fda39a009a26977aeef162d133c4a264ae5812bfb5489c5b8',  # pylint: disable=C0301
+MONTH_MAPPINGS = {
+    'dk': {
+        1: 'Jan',
+        2: 'Feb',
+        3: 'Mar',
+        4: 'Apr',
+        5: 'Maj',
+        6: 'Jun',
+        7: 'Jul',
+        8: 'Aug',
+        9: 'Sep',
+        10: 'Okt',
+        11: 'Nov',
+        12: 'Dec',
+    },
+    'en': {
+        1: 'Jan',
+        2: 'Feb',
+        3: 'Mar',
+        4: 'Apr',
+        5: 'May',
+        6: 'Jun',
+        7: 'Jul',
+        8: 'Aug',
+        9: 'Sep',
+        10: 'Oct',
+        11: 'Nov',
+        12: 'Dec',
+    },
 }
 MOOD_NAME_MAPPINGS = {
-    'en': {
-        'happy': 'happy',
-        'sad': 'sad',
-        'thoughtful': 'thoughtful',
-        'grumpy': 'grumpy',
-    },
     'dk': {
         'glad': 'happy',
         'trist': 'sad',
         'betænksom': 'thoughtful',
         'gnaven': 'grumpy',
+    },
+    'en': {
+        'happy': 'happy',
+        'sad': 'sad',
+        'thoughtful': 'thoughtful',
+        'grumpy': 'grumpy',
     },
 }
 MOOD_EMOJI_MAPPINGS = {
@@ -62,12 +88,18 @@ MOOD_EMOJI_MAPPINGS = {
     'thoughtful': '🤔',
     'grumpy': '😠',
 }
+EXPECTED_BOOTSTRAP_FILES = {
+    'bootstrap.min.css': '4ffcc598ee6cff4692c1cea272cd8a2f195f6dec32473e94370d6cdcfa5fe601',  # pylint: disable=C0301
+    'bootstrap-grid.min.css': '158cf68fff05fa7b67dab1734752e67e4d4dcf08a3bbb3e046d5cd9cbc3bd86b',  # pylint: disable=C0301
+    'bootstrap-reboot.min.css': 'cd3d5950dfe3d62fda39a009a26977aeef162d133c4a264ae5812bfb5489c5b8',  # pylint: disable=C0301
+}
 
 
 class Section:  # pylint: disable=R0903
     """A section of a blog post."""
     def __init__(self,
                  section_data: dict,
+                 date: str,
                  link_urls: typing.Optional[typing.List[str]]):
         _validate_section_data(section_data)
         self.title = escape(section_data['title'])
@@ -75,7 +107,7 @@ class Section:  # pylint: disable=R0903
         self.mood = escape(section_data.get('mood', ''))
         self.language = section_data['language']
         self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
-        self.date = escape(section_data['date'])
+        self.date = self._get_date_string(date)
         self.links = []
         if link_urls:
             link_descriptions = [
@@ -88,6 +120,11 @@ class Section:  # pylint: disable=R0903
                     f'Link urls: {link_urls}'
                 )
             self.links = list(zip(link_urls, link_descriptions))
+
+    def _get_date_string(self, date):
+        date = datetime.strptime(date, '%Y-%m-%d')
+        month = MONTH_MAPPINGS[self.language][date.month]
+        return f'{date.year} {month} {date.day}'
 
     def get_html(self) -> str:
         """Get this section's HTML."""
@@ -158,7 +195,7 @@ def _get_header_link_attrs(target):
 
 def _validate_section_data(section_data: dict):
     """Generate a Section if given valid section data."""
-    required_keys = ['title', 'text', 'language', 'date']
+    required_keys = ['title', 'text', 'language']
     optional_keys = ['mood', 'links']
     all_keys = required_keys + optional_keys
 
@@ -223,7 +260,9 @@ def load_posts(data_dir: str) -> typing.List[Post]:
         try:
             posts.append(Post(
                 sections=[
-                    Section(s, link_urls=post_data.get('links'))
+                    Section(s,
+                            date=post_data['date'],
+                            link_urls=post_data.get('links'))
                     for s in sorted(post_data['sections'],
                                     key=lambda x: x['language'])
                 ],
