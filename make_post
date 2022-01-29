@@ -305,6 +305,23 @@ class InvalidHTMLDir(Exception):
     """Raised when post update cannot be performed."""
 
 
+def update_file_if_needed(expected_content: str, path: str):
+    """Update a file if the contents should be changed.
+    Returns True if updated, False if not.
+    """
+    current_content = None
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as handle:
+            current_content = handle.read()
+    if current_content == expected_content:
+        print(f'{path} is up to date.')
+        return False
+    print(f'Updating {path}')
+    with open(path, 'w', encoding='utf-8') as handle:
+        handle.write(expected_content)
+    return True
+
+
 def update_posts(posts: typing.List[Post], html_dir: str):
     """Add new posts and update any existing posts that need updating."""
 
@@ -312,17 +329,9 @@ def update_posts(posts: typing.List[Post], html_dir: str):
     for post in posts:
         html_content = post.get_html()
         html_path = post.get_html_path(html_dir)
-        current_content = ''
-        if os.path.exists(html_path):
-            with open(html_path, encoding='utf-8') as html_handle:
-                current_content = html_handle.read()
-        if current_content == html_content:
-            print(f'Post is up to date at: {html_path}')
-            continue
-        print(f'Updating {html_path}')
-        updated += 1
-        with open(html_path, 'w', encoding='utf-8') as html_handle:
-            html_handle.write(html_content)
+        if update_file_if_needed(html_content, html_path):
+            updated += 1
+
     print(f'Updated {updated}/{len(posts)} posts.')
 
 
