@@ -7,7 +7,10 @@ import json
 import os
 import typing
 
+# TODO: Store ISO datetime to avoid random order if multiple posts in day
 # TODO: BLOG TITLE needs to have the actual title set from somewhere...
+DISABLED_NAVBAR_LINK_ATTRS = \
+    'style="cursor:default" class="text-muted navbar-brand"'
 # pylint: disable=C0301
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -27,24 +30,41 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 </div>
 </body>
 </html>'''
-INDEX_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <title>BLOG TITLE</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 </head>
 <body>
-{year_links}
+<div class="navbar navbar-dark bg-dark">
+<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
+<a id="home-link" href="/" class="navbar-brand"><strong>HOMEPAGE</strong></a>
+</div>
+<div class="container-fluid clearfix">
+{{year_links}}
+</div>
 </body>
 </html>'''
 YEAR_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<title>BLOG TITLE - {year}</title>
+<title>BLOG TITLE - {{year}}</title>
+<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 </head>
 <body>
-{post_links}
+<div class="navbar navbar-dark bg-dark">
+<a id="home-link" href="{prev_post}" {prev_attrs}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="{next_post}" {next_attrs}><strong>NEXT POST</strong></a>
+<a id="home-link" href="/" class="navbar-brand"><strong>HOMEPAGE</strong></a>
+</div>
+<div class="container-fluid clearfix">
+{{post_links1}}
+{{post_links2}}
+</div>
 </body>
 </html>'''
 # pylint: enable=C0301
@@ -53,10 +73,12 @@ LANGUAGE_MAPPINGS = {
     'dk': {
         'flag': '🇩🇰',
         'mood': 'Humør',
+        'posts': 'Blogindlæg',
     },
     'en': {
         'flag': '🇬🇧',
         'mood': 'Mood',
+        'posts': 'Blog posts',
     },
 }
 MONTH_MAPPINGS = {
@@ -128,7 +150,7 @@ class Section:  # pylint: disable=R0903
         self.mood = escape(section_data.get('mood', ''))
         self.language = section_data['language']
         self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
-        self.date = self._get_date_string(date)
+        self.date = _get_date_string(date, self.language)
         self.links = []
         if link_urls:
             link_descriptions = [
@@ -141,10 +163,6 @@ class Section:  # pylint: disable=R0903
                     f'Link urls: {link_urls}'
                 )
             self.links = list(zip(link_urls, link_descriptions))
-
-    def _get_date_string(self, date):
-        month = MONTH_MAPPINGS[self.language][date.month]
-        return f'{date.year} {month} {date.day}'
 
     def get_html(self) -> str:
         """Get this section's HTML."""
@@ -205,14 +223,81 @@ class Post:  # pylint: disable=R0903
         return os.path.join(html_dir, self.html_filename)
 
 
+class Year:
+    """An overview of a year of blog posts."""
+    def __init__(self, year: int, posts: typing.List[Post]):
+        self.year = year
+        self.posts = posts
+        self.languages = sorted([
+            section.language for section in posts[0].sections
+        ])
+
+    def get_html(self) -> str:
+        """Get this year's HTML."""
+        return YEAR_TEMPLATE.format(
+            year=self.year,
+            post_links1=self._get_post_links_html(self.languages[0]),
+            post_links2=self._get_post_links_html(self.languages[1]),
+        )
+
+    def _get_post_links_html(self, language: str):
+        """Get the HTML for the given language for this year."""
+        months_html = [
+            self._get_section_month_html(month, language)
+            for month in range(1,13)
+        ]
+        months_html_string = '\n'.join([
+            month_html for month_html in months_html if month_html
+        ])
+        posts_title = LANGUAGE_MAPPINGS[language]['posts']
+        flag = LANGUAGE_MAPPINGS[language]['flag']
+        return (
+            '<div class="ml-5 float-md-left">\n'
+            f'<h2>{flag}{posts_title}</h2>\n'
+            f'{months_html_string}\n'
+            '</div>\n'
+        )
+
+    def _get_section_month_html(self, month: int, language: str):
+        """Get the section HTML for a given month and language."""
+        relevant_posts = [post
+                          for post in self.posts if post.date.month == month]
+        month_html = []
+        if relevant_posts:
+            month_string = MONTH_MAPPINGS[language][month]
+            month_html.append(f'<h3>{month_string}</h3>')
+        dates_and_titles = {}
+        for post in relevant_posts:
+            for section in post.sections:
+                if section.language == language:
+                    dates_and_titles[post.date] = (section.title, post)
+                    break
+        for date in sorted(dates_and_titles):
+            title, post = dates_and_titles[date]
+            date_string = _get_date_string(post.date, language)
+            month_html.append(
+                f'<a href="{post.html_filename}">{date_string}{title}</a>')
+        return '\n'.join(month_html)
+
+    def get_html_path(self, html_dir: str) -> str:
+        """Get the desired html path for this post in the given dir."""
+        return os.path.join(html_dir, f'year_{self.year}.html')
+
+
 class InvalidSectionData(Exception):
     """Raised when attempting to generate a section from invalid data."""
+
+
+def _get_date_string(date: datetime, language: str):
+    """Get the stringified date for the given language."""
+    month = MONTH_MAPPINGS[language][date.month]
+    return f'{date.year} {month} {date.day}'
 
 
 def _get_header_link_attrs(target):
     """Get the attributes to assign to a header link based on the target."""
     if target == '#':
-        return 'style="cursor:default" class="text-muted navbar-brand"'
+        return DISABLED_NAVBAR_LINK_ATTRS
     return 'class="navbar-brand"'
 
 
