@@ -284,6 +284,16 @@ class Year:
         return os.path.join(html_dir, f'year_{self.year}.html')
 
 
+class Index:
+    """The top level index."""
+    def __init__(self, years: typing.List[Year]):
+        self.years = years
+
+    def _get_year_links_html(self):
+        """Get the links for each year of blog posts."""
+        
+
+
 class InvalidSectionData(Exception):
     """Raised when attempting to generate a section from invalid data."""
 
@@ -407,12 +417,15 @@ def update_file_if_needed(expected_content: str, path: str):
     return True
 
 
-def build_year_page(year_posts: typing.List[Post], year: str) -> Year:
-    return year_post
-
-
-def build_index_page(years: typing.List[Year]) -> str:
-    return index_html
+def build_years_pages(posts: typing.List[Post]) -> typing.List[Year]:
+    year_posts = {}
+    for post in posts:
+        year = post.date.year
+        if year not in year_posts:
+            year_posts[year]= []
+        tear_posts.append(year)
+    return [Year(year=year, posts=posts)
+            for year, posts in year_posts.items()]
 
 
 def update_posts(posts: typing.List[Post], html_dir: str):
@@ -427,8 +440,15 @@ def update_posts(posts: typing.List[Post], html_dir: str):
     print(f'Updated {updated}/{len(posts)} posts.')
 
     updated_years = 0
-    # TODO: years
+    years = build_years_pages(posts)
+    for year in years:
+        html_content = year.get_html()
+        html_path = year.get_html_path(html_dir)
+        if update_ile_if_needed(html_content, html_path):
+            updated_years += 1
+    print(f'Updated {updated_years}/{len(years)} year pages.')
 
+    index = 
     # TODO: index
 
 
