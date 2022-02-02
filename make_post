@@ -275,7 +275,8 @@ class Year:
             title, post = dates_and_titles[date]
             date_string = _get_date_string(post.date, language)
             month_html.append(
-                f'<a href="{post.html_filename}">{date_string}{title}</a>')
+                f'<a href="{post.html_filename}">{date_string} - {title}'
+                '</a><br />')
         return '\n'.join(month_html)
 
     def get_html_path(self, html_dir: str) -> str:
