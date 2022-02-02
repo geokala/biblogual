@@ -7,7 +7,6 @@ import json
 import os
 import typing
 
-# TODO: Store ISO datetime to avoid random order if multiple posts in day
 # TODO: BLOG TITLE needs to have the actual title set from somewhere...
 DISABLED_NAVBAR_LINK_ATTRS = \
     'style="cursor:default" class="text-muted navbar-brand"'
@@ -69,6 +68,7 @@ YEAR_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 </html>'''
 # pylint: enable=C0301
 
+DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 LANGUAGE_MAPPINGS = {
     'dk': {
         'flag': '🇩🇰',
@@ -295,12 +295,13 @@ class Index:
         """Get the links for each year of blog posts."""
         return '\n'.join([
             f'<a href="{year.html_filename}">{year.year}</a>'
+            for year in self.years
         ])
 
     def get_html(self) -> str:
         """Get the index HTML."""
         return INDEX_TEMPLATE.format(
-            year_links=self._get_year_links(),
+            year_links=self._get_year_links_html(),
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -386,7 +387,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
             next_post = _get_post_html_filename(post_data_files[idx + 1])
         with open(post_data_path, encoding='utf-8') as post_handle:
             post_data = json.load(post_handle)
-        date = datetime.strptime(post_data['date'], '%Y-%m-%d')
+        date = datetime.strptime(post_data['date'], DATETIME_FORMAT)
         if len(post_data['sections']) != 2:
             raise InvalidPostData(
                 f'2 sections were expected in {post_data_path}')
@@ -432,12 +433,13 @@ def update_file_if_needed(expected_content: str, path: str):
 
 
 def build_years_pages(posts: typing.List[Post]) -> typing.List[Year]:
-    year_posts = {}
+    """Build the Year pages."""
+    year_posts: typing.Dict[int, typing.List[Post]] = {}
     for post in posts:
         year = post.date.year
         if year not in year_posts:
             year_posts[year]= []
-        tear_posts.append(year)
+        year_posts[year].append(post)
     return [Year(year=year, posts=posts)
             for year, posts in year_posts.items()]
 
