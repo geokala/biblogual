@@ -228,6 +228,7 @@ class Year:
     def __init__(self, year: int, posts: typing.List[Post]):
         self.year = year
         self.posts = posts
+        self.html_filename = f'year_{self.year}.html'
         self.languages = sorted([
             section.language for section in posts[0].sections
         ])
@@ -281,17 +282,30 @@ class Year:
 
     def get_html_path(self, html_dir: str) -> str:
         """Get the desired html path for this post in the given dir."""
-        return os.path.join(html_dir, f'year_{self.year}.html')
+        return os.path.join(html_dir, self.html_filename)
 
 
 class Index:
     """The top level index."""
     def __init__(self, years: typing.List[Year]):
         self.years = years
+        self.html_filename = 'index.html'
 
     def _get_year_links_html(self):
         """Get the links for each year of blog posts."""
-        
+        return '\n'.join([
+            f'<a href="{year.html_filename}">{year.year}</a>'
+        ])
+
+    def get_html(self) -> str:
+        """Get the index HTML."""
+        return INDEX_TEMPLATE.format(
+            year_links=self._get_year_links(),
+        )
+
+    def get_html_path(self, html_dir: str) -> str:
+        """Get the desired html path for the index in the given dir."""
+        return os.path.join(html_dir, self.html_filename)
 
 
 class InvalidSectionData(Exception):
@@ -444,12 +458,13 @@ def update_posts(posts: typing.List[Post], html_dir: str):
     for year in years:
         html_content = year.get_html()
         html_path = year.get_html_path(html_dir)
-        if update_ile_if_needed(html_content, html_path):
+        if update_file_if_needed(html_content, html_path):
             updated_years += 1
     print(f'Updated {updated_years}/{len(years)} year pages.')
 
-    index = 
-    # TODO: index
+    index = Index(years)
+    if update_file_if_needed(index.get_html(), index.get_html_path(html_dir)):
+        print('Updated index.')
 
 
 def check_html_dir_valid(html_dir: str):
