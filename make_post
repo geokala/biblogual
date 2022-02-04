@@ -5,6 +5,7 @@ from hashlib import sha256
 from html import escape
 import json
 import os
+from tempfile import mkdtemp
 import typing
 
 # TODO: BLOG TITLE needs to have the actual title set from somewhere...
@@ -500,6 +501,36 @@ def check_html_dir_valid(html_dir: str):
                 ),
             )
         )
+
+
+def make_post():
+    """Make a new post"""
+    new_post = {
+        'date': datetime.now().strftime(DATETIME_FORMAT),
+        'links': [],
+        'sections': [],
+    }
+
+    tempdir = mkdtemp(prefix='blogpost')
+
+    try:
+        lang_paths = [
+            os.path.join(tempdir, lang)
+            for lang in LANGUAGE_MAPPINGS
+        ]
+            
+    # TODO: Open vim with side-by-side lang1 and lang2 files, noting that first line will be title
+    # TODO: When vim closed, pull title+text of each section into memory then purge tmpdir
+    finally:
+        for temp_lang in os.listdir(tempdir):
+            temp_lang_path = os.path.join(tempdir, temp_lang)
+            os.unlink(temp_lang_path)
+        os.rmdir(tempdir)
+
+
+    # TODO: Prompt for mood (notify if no emoji + mapping)
+    # TODO: Prompt for links (check them) and for each link prompt for lang1 and lang2 description
+
 
 
 if __name__ == '__main__':
