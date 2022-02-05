@@ -5,6 +5,8 @@ Objectives:
 Steps:
   - Handle creating posts
   - Ensure favicon present?
+  - Add latest.html (copy of last post)
+  - Update post templates to have next/prev/earliest/latest in both langs.
 
 Later:
   RSS

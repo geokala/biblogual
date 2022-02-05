@@ -20,8 +20,10 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="home-link" href="{prev_post}" {prev_attrs}><strong>PREVIOUS POST</strong></a>
-<a id="home-link" href="{next_post}" {next_attrs}><strong>NEXT POST</strong></a>
+<a id="first-link" href="{first_post}" class="navbar-brand"><strong>FIRST POST</strong></a>
+<a id="prev-link" href="{prev_post}" {prev_attrs}><strong>PREVIOUS POST</strong></a>
+<a id="next-link" href="{next_post}" {next_attrs}><strong>NEXT POST</strong></a>
+<a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
 <a id="home-link" href="index.html" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
@@ -38,8 +40,10 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
-<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
+<a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>FIRST POST</strong></a>
+<a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
+<a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
 <a id="home-link" href="index.html" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
@@ -55,8 +59,10 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
-<a id="home-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
+<a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>FIRST POST</strong></a>
+<a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
+<a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
 <a id="home-link" href="index.html" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
@@ -198,10 +204,12 @@ class Post:  # pylint: disable=R0903
                  sections: typing.List[Section],
                  html_filename: str,
                  date: datetime,
+                 first_path: str,
                  next_path: typing.Optional[str],
                  prev_path: typing.Optional[str]):
         self.sections = sections
         self.html_filename = html_filename
+        self.first_path = first_path
         self.next_path = next_path or '#'
         self.prev_path = prev_path or '#'
         self.date = date
@@ -211,6 +219,7 @@ class Post:  # pylint: disable=R0903
         return POST_TEMPLATE.format(
             section1=self.sections[0].get_html(),
             section2=self.sections[1].get_html(),
+            first_post=self.first_path,
             prev_post=self.prev_path,
             prev_attrs=_get_header_link_attrs(self.prev_path),
             next_post=self.next_path,
@@ -236,6 +245,7 @@ class Year:
         """Get this year's HTML."""
         return YEAR_TEMPLATE.format(
             year=self.year,
+            first_post=self.posts[0].html_filename,
             post_links1=self._get_post_links_html(self.languages[0]),
             post_links2=self._get_post_links_html(self.languages[1]),
         )
@@ -287,7 +297,8 @@ class Year:
 
 class Index:
     """The top level index."""
-    def __init__(self, years: typing.List[Year]):
+    def __init__(self, years: typing.List[Year], first_path: str):
+        self.first_path = first_path
         self.years = years
         self.html_filename = 'index.html'
 
@@ -301,6 +312,7 @@ class Index:
     def get_html(self) -> str:
         """Get the index HTML."""
         return INDEX_TEMPLATE.format(
+            first_post=self.first_path,
             year_links=self._get_year_links_html(),
         )
 
@@ -377,6 +389,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
     """Load post data from a directory."""
     posts = []
     post_data_files = os.listdir(data_dir)
+    first_post = _get_post_html_filename(post_data_files[0])
     for idx, post_file in enumerate(post_data_files):
         post_data_path = _get_post_data_path(post_file, data_dir)
         prev_post = None
@@ -400,6 +413,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
                     for s in sorted(post_data['sections'],
                                     key=lambda x: x['language'])
                 ],
+                first_path=first_post,
                 next_path=next_post,
                 prev_path=prev_post,
                 html_filename=_get_post_html_filename(post_file),
@@ -453,7 +467,14 @@ def update_posts(posts: typing.List[Post], html_dir: str):
         html_path = post.get_html_path(html_dir)
         if update_file_if_needed(html_content, html_path):
             updated += 1
-    print(f'Updated {updated}/{len(posts)} posts.')
+    if updated:
+        print(f'Updated {updated}/{len(posts)} posts.')
+
+    if update_file_if_needed(
+        posts[-1].get_html(),
+        os.path.join(html_dir, 'latest.html'),
+    ):
+        print('Updated latest post.')
 
     updated_years = 0
     years = build_years_pages(posts)
@@ -462,9 +483,10 @@ def update_posts(posts: typing.List[Post], html_dir: str):
         html_path = year.get_html_path(html_dir)
         if update_file_if_needed(html_content, html_path):
             updated_years += 1
-    print(f'Updated {updated_years}/{len(years)} year pages.')
+    if updated_years:
+        print(f'Updated {updated_years}/{len(years)} year pages.')
 
-    index = Index(years)
+    index = Index(years, first_path=posts[0].html_filename)
     if update_file_if_needed(index.get_html(), index.get_html_path(html_dir)):
         print('Updated index.')
 
