@@ -5,6 +5,7 @@ from hashlib import sha256
 from html import escape
 import json
 import os
+import subprocess
 from tempfile import mkdtemp
 import typing
 
@@ -79,11 +80,15 @@ LANGUAGE_MAPPINGS = {
         'flag': '🇩🇰',
         'mood': 'Humør',
         'posts': 'Blogindlæg',
+        'title_placeholder': 'Skriv title her',
+        'text_placeholder': 'Skriv blogtekst her og nedenfor',
     },
     'en': {
         'flag': '🇬🇧',
         'mood': 'Mood',
         'posts': 'Blog posts',
+        'title_placeholder': 'Write title here',
+        'text_placeholder': 'Write blog text here and below',
     },
 }
 MONTH_MAPPINGS = {
@@ -540,9 +545,29 @@ def make_post():
             os.path.join(tempdir, lang)
             for lang in LANGUAGE_MAPPINGS
         ]
-            
-    # TODO: Open vim with side-by-side lang1 and lang2 files, noting that first line will be title
-    # TODO: When vim closed, pull title+text of each section into memory then purge tmpdir
+
+        file1, file2 = lang_paths
+        for lang_file in lang_paths:
+            lang_text = LANGUAGE_MAPPINGS[lang_file.split('/')[-1]]
+            with open(lang_file, 'w', encoding='utf-8') as handle:
+                handle.writelines([
+                    lang_text['title_placeholder'],
+                    lang_text['text_placeholder'],
+                ])
+        subprocess.call(f"vim {file1} -S <(echo 'vs {file2}')")
+
+        for lang_file in lang_paths:
+            lang = lang_file.split('/')[-1]
+            with open(lang_file, 'r', encoding='utf-8') as handle:
+                lang_content = handle.readlines()
+            title = lang_content[0]
+            text = lang_content[1:]
+            new_post['sections'].append({
+                'title': title,
+                'links': [],
+                'text': text,
+                'language': lang,
+            })
     finally:
         for temp_lang in os.listdir(tempdir):
             temp_lang_path = os.path.join(tempdir, temp_lang)
