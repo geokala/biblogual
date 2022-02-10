@@ -530,6 +530,39 @@ def check_html_dir_valid(html_dir: str):
         )
 
 
+def get_custom_mood() -> typing.Tuple[str]:
+    # TODO: Get and return dk, en mood
+    pass
+
+
+def get_mood() -> typing.Tuple[str]:
+    """Prompt the user to get their mood."""
+    moods = sorted(
+        MOOD_NAME_MAPPINGS['dk'].items(),
+        key=lambda x: x[0],
+    )
+
+    display_template = '{num}: {lang1} / {lang2}'
+
+    mood_selected = None
+    print('Select mood:')
+    for num, mood in enumerate(moods):
+        print(display_template.format(num, mood[0], mood[1]))
+        print('{}: Custom'.format(len(moods)))
+    while not mood_selected:
+        try:
+            selection = int(input('Select mood: '))
+        except ValueError:
+            selection = None
+
+        if selection < 1 or selection > len(moods):
+            selection = None
+        else:
+            if selection == len(moods):
+                return get_custom_mood()
+            return moods[selection - 1]
+
+
 def make_post():
     """Make a new post"""
     new_post = {
@@ -574,6 +607,7 @@ def make_post():
             os.unlink(temp_lang_path)
         os.rmdir(tempdir)
 
+    get_mood()
 
     # TODO: Prompt for mood (notify if no emoji + mapping)
     # TODO: Prompt for links (check them) and for each link prompt for lang1 and lang2 description
