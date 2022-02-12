@@ -77,6 +77,7 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 LANGUAGE_MAPPINGS = {
     'dk': {
+        'name': 'Dansk',
         'flag': '🇩🇰',
         'mood': 'Humør',
         'posts': 'Blogindlæg',
@@ -84,6 +85,7 @@ LANGUAGE_MAPPINGS = {
         'text_placeholder': 'Skriv blogtekst her og nedenfor',
     },
     'en': {
+        'name': 'English',
         'flag': '🇬🇧',
         'mood': 'Mood',
         'posts': 'Blog posts',
@@ -530,9 +532,18 @@ def check_html_dir_valid(html_dir: str):
         )
 
 
-def get_custom_mood() -> typing.Tuple[str]:
-    # TODO: Get and return dk, en mood
-    pass
+def get_custom_mood() -> typing.Tuple[str, str]:
+    """Prompt the user for a custom mood."""
+    moods = {lang: '' for lang in LANGUAGE_MAPPINGS}
+    while any(not mood for mood in moods.values()):
+        for lang in moods:
+            lang_name = LANGUAGE_MAPPINGS[lang]['name']
+            moods[lang] = input(f'Enter {lang_name} mood:').strip()
+        confirm = input('Enter y and hit return if these are correct: ')
+        if confirm.strip().lower() != 'y':
+            moods = {lang: '' for lang in LANGUAGE_MAPPINGS}
+    order = sorted(moods.keys())
+    return moods[order[0]], moods[order[1]]
 
 
 def get_mood() -> typing.Tuple[str]:
@@ -609,7 +620,6 @@ def make_post():
 
     get_mood()
 
-    # TODO: Prompt for mood (notify if no emoji + mapping)
     # TODO: Prompt for links (check them) and for each link prompt for lang1 and lang2 description
 
 
