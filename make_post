@@ -559,7 +559,7 @@ def get_mood() -> typing.Tuple[str, str]:
     print('Select mood:')
     for num, mood in enumerate(moods):
         print(display_template.format(num, mood[0], mood[1]))
-        print('{}: Custom'.format(len(moods)))
+        print('{}: Custom'.format(len(moods)))  # pylint: disable=C0209
     while not selection:
         try:
             selection = int(input('Select mood: '))
