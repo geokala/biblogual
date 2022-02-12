@@ -587,7 +587,7 @@ def make_post():
     try:
         lang_paths = [
             os.path.join(tempdir, lang)
-            for lang in LANGUAGE_MAPPINGS
+            for lang in sorted(LANGUAGE_MAPPINGS)
         ]
 
         file1, file2 = lang_paths
@@ -618,7 +618,9 @@ def make_post():
             os.unlink(temp_lang_path)
         os.rmdir(tempdir)
 
-    get_mood()
+    mood = get_mood()
+    new_post['sections'][0]['mood'] = mood[0]
+    new_post['sections'][1]['mood'] = mood[1]
 
     # TODO: Prompt for links (check them) and for each link prompt for lang1 and lang2 description
 
