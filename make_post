@@ -546,7 +546,7 @@ def get_custom_mood() -> typing.Tuple[str, str]:
     return moods[order[0]], moods[order[1]]
 
 
-def get_mood() -> typing.Tuple[str]:
+def get_mood() -> typing.Tuple[str, str]:
     """Prompt the user to get their mood."""
     moods = sorted(
         MOOD_NAME_MAPPINGS['dk'].items(),
@@ -555,23 +555,23 @@ def get_mood() -> typing.Tuple[str]:
 
     display_template = '{num}: {lang1} / {lang2}'
 
-    mood_selected = None
+    selection = 0
     print('Select mood:')
     for num, mood in enumerate(moods):
         print(display_template.format(num, mood[0], mood[1]))
         print('{}: Custom'.format(len(moods)))
-    while not mood_selected:
+    while not selection:
         try:
             selection = int(input('Select mood: '))
         except ValueError:
-            selection = None
+            selection = 0
 
         if selection < 1 or selection > len(moods):
-            selection = None
+            selection = 0
         else:
             if selection == len(moods):
                 return get_custom_mood()
-            return moods[selection - 1]
+    return moods[selection - 1]
 
 
 def make_post():
