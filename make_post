@@ -532,6 +532,17 @@ def check_html_dir_valid(html_dir: str):
         )
 
 
+def get_user_confirmation() -> bool:
+    """Prompt the user to see if something is correct."""
+    while True:
+        confirm = input('Are these correct? (y/n): ').strip().lower()
+        if confirm == 'y':
+            return True
+        if confirm == 'n':
+            return False
+        print(f'{confirm} is not a valid response.')
+
+
 def get_custom_mood() -> typing.Tuple[str, str]:
     """Prompt the user for a custom mood."""
     moods = {lang: '' for lang in LANGUAGE_MAPPINGS}
@@ -539,8 +550,7 @@ def get_custom_mood() -> typing.Tuple[str, str]:
         for lang in moods:
             lang_name = LANGUAGE_MAPPINGS[lang]['name']
             moods[lang] = input(f'Enter {lang_name} mood:').strip()
-        confirm = input('Enter y and hit return if these are correct: ')
-        if confirm.strip().lower() != 'y':
+        if get_user_confirmation():
             moods = {lang: '' for lang in LANGUAGE_MAPPINGS}
     order = sorted(moods.keys())
     return moods[order[0]], moods[order[1]]
