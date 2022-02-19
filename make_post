@@ -6,27 +6,27 @@ from html import escape
 import json
 import os
 import subprocess
+import sys
 from tempfile import mkdtemp
 import typing
 from typing_extensions import TypedDict
 
-# TODO: BLOG TITLE needs to have the actual title set from somewhere...
 DISABLED_NAVBAR_LINK_ATTRS = \
     'style="cursor:default" class="text-muted navbar-brand"'
 # pylint: disable=C0301
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<title>BLOG TITLE</title>
+<title>{blog_title}</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{first_post}" class="navbar-brand"><strong>FIRST POST</strong></a>
 <a id="prev-link" href="{prev_post}" {prev_attrs}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="index.html" class="navbar-brand"><strong>{blog_title}</strong></a>
 <a id="next-link" href="{next_post}" {next_attrs}><strong>NEXT POST</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
-<a id="home-link" href="index.html" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
 {section1}
@@ -37,16 +37,16 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<title>BLOG TITLE</title>
+<title>{{blog_title}}</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>FIRST POST</strong></a>
 <a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="index.html" class="navbar-brand"><strong>{{blog_title}}</strong></a>
 <a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
-<a id="home-link" href="index.html" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
 {{year_links}}
@@ -56,16 +56,16 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<title>BLOG TITLE - {{year}}</title>
+<title>{{blog_title}} - {{year}}</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>FIRST POST</strong></a>
 <a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="home-link" href="index.html" class="navbar-brand"><strong>{{blog_title}}</strong></a>
 <a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
-<a id="home-link" href="index.html" class="navbar-brand"><strong>HOMEPAGE</strong></a>
 </div>
 <div class="container-fluid clearfix">
 {{post_links1}}
@@ -214,13 +214,15 @@ class Post:  # pylint: disable=R0903
                  date: datetime,
                  first_path: str,
                  next_path: typing.Optional[str],
-                 prev_path: typing.Optional[str]):
+                 prev_path: typing.Optional[str],
+                 blog_title: str):
         self.sections = sections
         self.html_filename = html_filename
         self.first_path = first_path
         self.next_path = next_path or '#'
         self.prev_path = prev_path or '#'
         self.date = date
+        self.blog_title = blog_title
 
     def get_html(self) -> str:
         """Get this post's HTML."""
@@ -232,6 +234,7 @@ class Post:  # pylint: disable=R0903
             prev_attrs=_get_header_link_attrs(self.prev_path),
             next_post=self.next_path,
             next_attrs=_get_header_link_attrs(self.next_path),
+            blog_title=self.blog_title,
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -241,13 +244,14 @@ class Post:  # pylint: disable=R0903
 
 class Year:
     """An overview of a year of blog posts."""
-    def __init__(self, year: int, posts: typing.List[Post]):
+    def __init__(self, year: int, posts: typing.List[Post], blog_title: str):
         self.year = year
         self.posts = posts
         self.html_filename = f'year_{self.year}.html'
         self.languages = sorted([
             section.language for section in posts[0].sections
         ])
+        self.blog_title = blog_title
 
     def get_html(self) -> str:
         """Get this year's HTML."""
@@ -256,6 +260,7 @@ class Year:
             first_post=self.posts[0].html_filename,
             post_links1=self._get_post_links_html(self.languages[0]),
             post_links2=self._get_post_links_html(self.languages[1]),
+            blog_title=self.blog_title,
         )
 
     def _get_post_links_html(self, language: str):
@@ -305,10 +310,12 @@ class Year:
 
 class Index:
     """The top level index."""
-    def __init__(self, years: typing.List[Year], first_path: str):
+    def __init__(self, years: typing.List[Year], first_path: str,
+                 blog_title: str):
         self.first_path = first_path
         self.years = years
         self.html_filename = 'index.html'
+        self.blog_title = blog_title
 
     def _get_year_links_html(self):
         """Get the links for each year of blog posts."""
@@ -322,6 +329,7 @@ class Index:
         return INDEX_TEMPLATE.format(
             first_post=self.first_path,
             year_links=self._get_year_links_html(),
+            blog_title=self.blog_title,
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -347,6 +355,11 @@ class PostData(TypedDict):
     date: str
     links: typing.List[str]
     sections: typing.List[SectionData]
+
+
+class BlogDetails(TypedDict):
+    """The dict structure of the blog details."""
+    title: str
 
 
 def _get_date_string(date: datetime, language: str):
@@ -409,10 +422,28 @@ def _get_post_html_filename(post_file: str) -> str:
     return name + '.html'
 
 
-def load_posts(data_dir: str) -> typing.List[Post]:
+def load_details(data_dir: str) -> BlogDetails:
+    """Load extra details of the blog, e.g. the blog title."""
+    details_path = os.path.join(data_dir, 'details.json')
+    expected_keys = {'title'}
+    with open(details_path, encoding='utf-8') as details_handle:
+        data = json.load(details_handle)
+    unknown_keys = ','.join(set(data).difference(expected_keys))
+    if unknown_keys:
+        sys.stderr.write(
+            f'Unknown keys found in blog details: {unknown_keys}\n')
+    return {
+        'title': data['title'],
+    }
+
+
+def load_posts(data_dir: str, blog_details: BlogDetails) -> typing.List[Post]:
     """Load post data from a directory."""
     posts = []
-    post_data_files = os.listdir(data_dir)
+    post_data_files = [
+        file_name for file_name in os.listdir(data_dir)
+        if file_name != 'details.json'
+    ]
     first_post = _get_post_html_filename(post_data_files[0])
     for idx, post_file in enumerate(post_data_files):
         post_data_path = _get_post_data_path(post_file, data_dir)
@@ -442,6 +473,7 @@ def load_posts(data_dir: str) -> typing.List[Post]:
                 prev_path=prev_post,
                 html_filename=_get_post_html_filename(post_file),
                 date=date,
+                blog_title=blog_details['title'],
             ))
         except InvalidSectionData as err:
             raise InvalidPostData(  # pylint: disable=W0707
@@ -470,7 +502,8 @@ def update_file_if_needed(expected_content: str, path: str):
     return True
 
 
-def build_years_pages(posts: typing.List[Post]) -> typing.List[Year]:
+def build_years_pages(posts: typing.List[Post],
+                      blog_details: BlogDetails) -> typing.List[Year]:
     """Build the Year pages."""
     year_posts: typing.Dict[int, typing.List[Post]] = {}
     for post in posts:
@@ -478,11 +511,12 @@ def build_years_pages(posts: typing.List[Post]) -> typing.List[Year]:
         if year not in year_posts:
             year_posts[year]= []
         year_posts[year].append(post)
-    return [Year(year=year, posts=posts)
+    return [Year(year=year, posts=posts, blog_title=blog_details['title'])
             for year, posts in year_posts.items()]
 
 
-def update_posts(posts: typing.List[Post], html_dir: str):
+def update_posts(posts: typing.List[Post], html_dir: str,
+                 blog_details: BlogDetails):
     """Add new posts and update any existing posts that need updating."""
 
     updated = 0
@@ -501,7 +535,7 @@ def update_posts(posts: typing.List[Post], html_dir: str):
         print('Updated latest post.')
 
     updated_years = 0
-    years = build_years_pages(posts)
+    years = build_years_pages(posts, blog_details)
     for year in years:
         html_content = year.get_html()
         html_path = year.get_html_path(html_dir)
@@ -510,7 +544,8 @@ def update_posts(posts: typing.List[Post], html_dir: str):
     if updated_years:
         print(f'Updated {updated_years}/{len(years)} year pages.')
 
-    index = Index(years, first_path=posts[0].html_filename)
+    index = Index(years, first_path=posts[0].html_filename,
+                  blog_title=blog_details['title'])
     if update_file_if_needed(index.get_html(), index.get_html_path(html_dir)):
         print('Updated index.')
 
@@ -703,9 +738,14 @@ def make_post(posts_path: str):
         json.dump(new_post, post_handle)
 
 
+def _temp_main():
+    source_dir = 'test_posts'
+    dest_dir = 'test_html'
+    blog_details = load_details(source_dir)
+    posts_data = load_posts(source_dir, blog_details)
+    check_html_dir_valid(dest_dir)
+    update_posts(posts_data, dest_dir, blog_details)
+
+
 if __name__ == '__main__':
-    SOURCE_DIR = 'test_posts'
-    DEST_DIR = 'test_html'
-    posts_data = load_posts(SOURCE_DIR)
-    check_html_dir_valid(DEST_DIR)
-    update_posts(posts_data, DEST_DIR)
+    _temp_main()
