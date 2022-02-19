@@ -3,8 +3,7 @@ Objectives:
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
 
 Steps:
-  - Block robots (robots.txt still?)
-  - Handle creating posts
+  - Block robots (robots.txt still?)  (User-agent: *\nDisallow: /)
   - Ensure favicon present?
   - Update post templates to have next/prev/earliest/latest in both langs.
 
