@@ -621,6 +621,47 @@ def get_mood() -> typing.Tuple[str, str]:
     return moods[selection - 1]
 
 
+def get_initial_section_data(tempdir: str) -> typing.List[SectionData]:
+    """Get the text of the post sections from the user."""
+    lang_paths = [
+        os.path.join(tempdir, lang)
+        for lang in sorted(LANGUAGE_MAPPINGS)
+    ]
+    file1, file2 = lang_paths
+
+    for lang_file in lang_paths:
+        lang_text = LANGUAGE_MAPPINGS[lang_file.split('/')[-1]]
+        with open(lang_file, 'w', encoding='utf-8') as handle:
+            handle.writelines([
+                lang_text['title_placeholder'],
+                lang_text['text_placeholder'],
+            ])
+    subprocess.call(f"vim {file1} -S <(echo 'vs {file2}')")
+
+    sections: typing.List[SectionData] = [
+        {
+            'title': '',
+            'links': [],
+            'text': '',
+            'language': lang,
+            'mood': None,
+        }
+        for lang in sorted(LANGUAGE_MAPPINGS)
+    ]
+
+    for idx, lang_file in enumerate(lang_paths):
+        lang = lang_file.split('/')[-1]
+        with open(lang_file, 'r', encoding='utf-8') as handle:
+            lang_content = handle.readlines()
+        if sections[idx]['language'] != lang:
+            raise RuntimeError(
+                'Section language mismatch- this should never happen.'
+            )
+        sections[idx]['title'] = lang_content[0]
+        sections[idx]['text'] = '\n'.join(lang_content[1:])
+    return sections
+
+
 def make_post(posts_path: str):
     """Make a new post"""
     new_post: PostData = {
@@ -632,34 +673,7 @@ def make_post(posts_path: str):
     tempdir = mkdtemp(prefix='blogpost')
 
     try:
-        lang_paths = [
-            os.path.join(tempdir, lang)
-            for lang in sorted(LANGUAGE_MAPPINGS)
-        ]
-
-        file1, file2 = lang_paths
-        for lang_file in lang_paths:
-            lang_text = LANGUAGE_MAPPINGS[lang_file.split('/')[-1]]
-            with open(lang_file, 'w', encoding='utf-8') as handle:
-                handle.writelines([
-                    lang_text['title_placeholder'],
-                    lang_text['text_placeholder'],
-                ])
-        subprocess.call(f"vim {file1} -S <(echo 'vs {file2}')")
-
-        for lang_file in lang_paths:
-            lang = lang_file.split('/')[-1]
-            with open(lang_file, 'r', encoding='utf-8') as handle:
-                lang_content = handle.readlines()
-            title = lang_content[0]
-            text = '\n'.join(lang_content[1:])
-            new_post['sections'].append({
-                'title': title,
-                'links': [],
-                'text': text,
-                'language': lang,
-                'mood': None,
-            })
+        new_post['sections'] = get_initial_section_data(tempdir)
     finally:
         for temp_lang in os.listdir(tempdir):
             temp_lang_path = os.path.join(tempdir, temp_lang)
