@@ -360,6 +360,7 @@ class PostData(TypedDict):
 class BlogDetails(TypedDict):
     """The dict structure of the blog details."""
     title: str
+    allow_robots: str
 
 
 def _get_date_string(date: datetime, language: str):
@@ -425,7 +426,7 @@ def _get_post_html_filename(post_file: str) -> str:
 def load_details(data_dir: str) -> BlogDetails:
     """Load extra details of the blog, e.g. the blog title."""
     details_path = os.path.join(data_dir, 'details.json')
-    expected_keys = {'title'}
+    expected_keys = {'title', 'allow_robots'}
     with open(details_path, encoding='utf-8') as details_handle:
         data = json.load(details_handle)
     unknown_keys = ','.join(set(data).difference(expected_keys))
@@ -434,6 +435,7 @@ def load_details(data_dir: str) -> BlogDetails:
             f'Unknown keys found in blog details: {unknown_keys}\n')
     return {
         'title': data['title'],
+        'allow_robots': data['allow_robots'],
     }
 
 
@@ -483,6 +485,17 @@ def load_posts(data_dir: str, blog_details: BlogDetails) -> typing.List[Post]:
 
 class InvalidHTMLDir(Exception):
     """Raised when post update cannot be performed."""
+
+
+def get_robots_content(blog_details: BlogDetails) -> str:
+    """Get the content of the robots.txt"""
+    disallow = '' if blog_details['allow_robots'] else '/'
+    return f'User-agent: *\nDisallow: {disallow}\n'
+
+
+def get_robots_path(html_dir: str) -> str:
+    """Get the path of the robots.txt"""
+    return os.path.join(html_dir, 'robots.txt')
 
 
 def update_file_if_needed(expected_content: str, path: str):
@@ -548,6 +561,10 @@ def update_posts(posts: typing.List[Post], html_dir: str,
                   blog_title=blog_details['title'])
     if update_file_if_needed(index.get_html(), index.get_html_path(html_dir)):
         print('Updated index.')
+
+    robots_content = get_robots_content(blog_details)
+    if update_file_if_needed(robots_content, get_robots_path(html_dir)):
+        print('Updated robots.txt')
 
 
 def check_html_dir_valid(html_dir: str):
