@@ -25,11 +25,11 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="first-link" href="{first_post}" class="navbar-brand"><strong>FIRST POST</strong></a>
-<a id="prev-link" href="{prev_post}" {prev_attrs}><strong>PREVIOUS POST</strong></a>
+<a id="first-link" href="{first_post}" class="navbar-brand"><strong>{first}</strong></a>
+<a id="prev-link" href="{prev_post}" {prev_attrs}><strong>{previous}</strong></a>
 <a id="home-link" href="index.html" class="navbar-brand"><strong>{blog_title}</strong></a>
-<a id="next-link" href="{next_post}" {next_attrs}><strong>NEXT POST</strong></a>
-<a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
+<a id="next-link" href="{next_post}" {next_attrs}><strong>{next}</strong></a>
+<a id="latest-link" href="latest.html" class="navbar-brand"><strong>{latest}</strong></a>
 </div>
 <div class="container-fluid clearfix">
 {section1}
@@ -48,11 +48,11 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>FIRST POST</strong></a>
-<a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>{{first}}</strong></a>
+<a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{previous}}</strong></a>
 <a id="home-link" href="index.html" class="navbar-brand"><strong>{{blog_title}}</strong></a>
-<a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
-<a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
+<a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{next}}</strong></a>
+<a id="latest-link" href="latest.html" class="navbar-brand"><strong>{{latest}}</strong></a>
 </div>
 <div class="container-fluid clearfix">
 {{year_links}}
@@ -70,11 +70,11 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 </head>
 <body>
 <div class="navbar navbar-dark bg-dark">
-<a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>FIRST POST</strong></a>
-<a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>PREVIOUS POST</strong></a>
+<a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>{{first}}</strong></a>
+<a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{previous}}</strong></a>
 <a id="home-link" href="index.html" class="navbar-brand"><strong>{{blog_title}}</strong></a>
-<a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>NEXT POST</strong></a>
-<a id="latest-link" href="latest.html" class="navbar-brand"><strong>LATEST POST</strong></a>
+<a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{next}}</strong></a>
+<a id="latest-link" href="latest.html" class="navbar-brand"><strong>{{latest}}</strong></a>
 </div>
 <div class="container-fluid clearfix">
 {{post_links1}}
@@ -93,6 +93,10 @@ LANGUAGE_MAPPINGS = {
         'posts': 'Blogindlæg',
         'title_placeholder': 'Skriv title her',
         'text_placeholder': 'Skriv blogtekst her og nedenfor',
+        'first': 'første',
+        'previous': 'tidligere',
+        'next': 'næste',
+        'latest': 'seneste',
     },
     'en': {
         'name': 'English',
@@ -101,6 +105,10 @@ LANGUAGE_MAPPINGS = {
         'posts': 'Blog posts',
         'title_placeholder': 'Write title here',
         'text_placeholder': 'Write blog text here and below',
+        'first': 'first',
+        'previous': 'previous',
+        'next': 'next',
+        'latest': 'latest',
     },
 }
 MONTH_MAPPINGS = {
@@ -244,6 +252,7 @@ class Post:  # pylint: disable=R0903
             next_post=self.next_path,
             next_attrs=_get_header_link_attrs(self.next_path),
             blog_title=self.blog_title,
+            **get_navigation_link_text()
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -270,6 +279,7 @@ class Year:
             post_links1=self._get_post_links_html(self.languages[0]),
             post_links2=self._get_post_links_html(self.languages[1]),
             blog_title=self.blog_title,
+            **get_navigation_link_text()
         )
 
     def _get_post_links_html(self, language: str):
@@ -339,6 +349,7 @@ class Index:
             first_post=self.first_path,
             year_links=self._get_year_links_html(),
             blog_title=self.blog_title,
+            **get_navigation_link_text()
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -370,6 +381,17 @@ class BlogDetails(TypedDict):
     """The dict structure of the blog details."""
     title: str
     allow_robots: str
+
+
+def get_navigation_link_text():
+    """Get the link text for navigation."""
+    return {
+        nav_name: '/'.join([
+            LANGUAGE_MAPPINGS[lang][nav_name].upper()
+            for lang in sorted(LANGUAGE_MAPPINGS)
+        ])
+        for nav_name in ['first', 'previous', 'next', 'latest']
+    }
 
 
 def _get_date_string(date: datetime, language: str):
