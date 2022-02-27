@@ -85,76 +85,7 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 # pylint: enable=C0301
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
-LANGUAGE_MAPPINGS = {
-    'dk': {
-        'name': 'Dansk',
-        'flag': '🇩🇰',
-        'mood': 'Humør',
-        'posts': 'Blogindlæg',
-        'title_placeholder': 'Skriv title her',
-        'text_placeholder': 'Skriv blogtekst her og nedenfor',
-        'first': 'første',
-        'previous': 'tidligere',
-        'next': 'næste',
-        'latest': 'seneste',
-    },
-    'en': {
-        'name': 'English',
-        'flag': '🇬🇧',
-        'mood': 'Mood',
-        'posts': 'Blog posts',
-        'title_placeholder': 'Write title here',
-        'text_placeholder': 'Write blog text here and below',
-        'first': 'first',
-        'previous': 'previous',
-        'next': 'next',
-        'latest': 'latest',
-    },
-}
-MONTH_MAPPINGS = {
-    'dk': {
-        1: 'Jan',
-        2: 'Feb',
-        3: 'Mar',
-        4: 'Apr',
-        5: 'Maj',
-        6: 'Jun',
-        7: 'Jul',
-        8: 'Aug',
-        9: 'Sep',
-        10: 'Okt',
-        11: 'Nov',
-        12: 'Dec',
-    },
-    'en': {
-        1: 'Jan',
-        2: 'Feb',
-        3: 'Mar',
-        4: 'Apr',
-        5: 'May',
-        6: 'Jun',
-        7: 'Jul',
-        8: 'Aug',
-        9: 'Sep',
-        10: 'Oct',
-        11: 'Nov',
-        12: 'Dec',
-    },
-}
-MOOD_NAME_MAPPINGS = {
-    'dk': {
-        'glad': 'happy',
-        'trist': 'sad',
-        'betænksom': 'thoughtful',
-        'gnaven': 'grumpy',
-    },
-    'en': {
-        'happy': 'happy',
-        'sad': 'sad',
-        'thoughtful': 'thoughtful',
-        'grumpy': 'grumpy',
-    },
-}
+LANGUAGE_MAPPINGS = {}
 MOOD_EMOJI_MAPPINGS = {
     'happy': '🙂',
     'sad': '🙁',
@@ -168,6 +99,13 @@ EXPECTED_BOOTSTRAP_FILES = {
 }
 
 
+class Language:
+    def __init__(self, lang_data):
+        self.flag = lang_data['flag']
+        self.mood = lang_data['mood']
+        self.posts = lang_data['posts']
+
+
 class Section:  # pylint: disable=R0903
     """A section of a blog post."""
     def __init__(self,
@@ -179,7 +117,7 @@ class Section:  # pylint: disable=R0903
         self.text = escape(section_data['text'])
         self.mood = escape(section_data.get('mood', ''))
         self.language = section_data['language']
-        self.flag = LANGUAGE_MAPPINGS[self.language]['flag']
+        self.flag = LANGUAGE_MAPPINGS[self.language].flag
         self.date = _get_date_string(date, self.language)
         self.links = []
         if link_urls:
@@ -198,7 +136,7 @@ class Section:  # pylint: disable=R0903
         """Get this section's HTML."""
         mood_string = ''
         if self.mood:
-            mood = LANGUAGE_MAPPINGS[self.language]['mood']
+            mood = LANGUAGE_MAPPINGS[self.language].mood
             mood_emoji_name_mapping = MOOD_NAME_MAPPINGS[self.language].get(
                 self.mood)
             emoji = ''
@@ -291,8 +229,8 @@ class Year:
         months_html_string = '\n'.join([
             month_html for month_html in months_html if month_html
         ])
-        posts_title = LANGUAGE_MAPPINGS[language]['posts']
-        flag = LANGUAGE_MAPPINGS[language]['flag']
+        posts_title = LANGUAGE_MAPPINGS[language].posts
+        flag = LANGUAGE_MAPPINGS[language].flag
         return (
             '<div class="ml-5 float-md-left">\n'
             f'<h2>{flag}{posts_title}</h2>\n'
