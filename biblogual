@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 """Generate pages for a static blog."""
+from argparse import ArgumentParser
 from datetime import datetime
 from hashlib import sha256
 from html import escape
@@ -738,14 +739,39 @@ def make_post(posts_path: str):
         json.dump(new_post, post_handle)
 
 
-def _temp_main():
+def _main(args: typing.List[str]):
+    parser = ArgumentParser(description='Biblogual management tool.')
+
+    parser.add_argument(
+        '-v', '--version',
+        help='Display version information.',
+        action='version',
+        version='prerelease',
+    )
+
+    subparsers = parser.add_subparsers(
+        help='Blog action', dest='action',
+    )
+
+    subparsers.add_parser('make_post', help='Make new blog post.')
+
+    subparsers.add_parser(
+        'reconcile',
+        help='Bring posts into line with template/data changes.')
+
+    args = parser.parse_args()
+
     source_dir = 'test_posts'
     dest_dir = 'test_html'
-    blog_details = load_details(source_dir)
-    posts_data = load_posts(source_dir, blog_details)
-    check_html_dir_valid(dest_dir)
-    update_posts(posts_data, dest_dir, blog_details)
+
+    if args.action == 'make_post':
+        print('Make post')
+    elif args.action == 'reconcile':
+        blog_details = load_details(source_dir)
+        posts_data = load_posts(source_dir, blog_details)
+        check_html_dir_valid(dest_dir)
+        update_posts(posts_data, dest_dir, blog_details)
 
 
 if __name__ == '__main__':
-    _temp_main()
+    _main(sys.argv)
