@@ -86,7 +86,7 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 # pylint: enable=C0301
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
-LANGUAGE_MAPPINGS = {}
+LANGUAGE_MAPPINGS = None
 MOOD_EMOJI_MAPPINGS = {
     'happy': '🙂',
     'sad': '🙁',
@@ -98,13 +98,6 @@ EXPECTED_BOOTSTRAP_FILES = {
     'bootstrap-grid.min.css': '158cf68fff05fa7b67dab1734752e67e4d4dcf08a3bbb3e046d5cd9cbc3bd86b',  # pylint: disable=C0301
     'bootstrap-reboot.min.css': 'cd3d5950dfe3d62fda39a009a26977aeef162d133c4a264ae5812bfb5489c5b8',  # pylint: disable=C0301
 }
-
-
-class Language:
-    def __init__(self, lang_data):
-        self.flag = lang_data['flag']
-        self.mood = lang_data['mood']
-        self.posts = lang_data['posts']
 
 
 class Section:  # pylint: disable=R0903
@@ -300,6 +293,23 @@ class InvalidSectionData(Exception):
     """Raised when attempting to generate a section from invalid data."""
 
 
+class LangData(TypedDict):
+    """The dict structure of language json files."""
+    short_name: str
+    name: str
+    flag: str
+    mood: str
+    posts: str
+    title_placeholder: str
+    text_placeholder: str
+    first: str
+    previous: str
+    next: str
+    latest: str
+    months: typing.List[str]
+    moods: typing.Dict[str, str]
+
+
 class SectionData(TypedDict):
     """The dict structure of a section as contained in the json file."""
     title: str
@@ -393,6 +403,47 @@ def _get_post_html_filename(post_file: str) -> str:
     return name + '.html'
 
 
+class InvalidLangCount(Exception):
+    """Raised when an invalid amount of languages is provided."""
+
+
+class Language:  # pylint: disable=R0903
+    """A language as used by the blog."""
+    def __init__(self, lang_dict: LangData):
+        self.short_name = lang_dict['short_name']
+        self.flag = lang_dict['flag']
+        self.words = {
+            word: lang_dict[word]
+            for word in ['name', 'mood', 'posts',
+                         'first', 'previous', 'next', 'latest']
+        }
+        self.placeholders = {
+            placeholder: lang_dict[f'{placeholder}_placeholder']
+            for placeholder in ['title', 'text']
+        }
+        self.months = lang_dict['months']
+        self.moods = lang_dict['moods']
+
+
+def load_language_mappings(data_dir: str):
+    """Load the language mappings into the global variable."""
+    global LANGUAGE_MAPPINGS
+    lang_dir = os.path.join(data_dir, 'langs')
+    lang_files = os.listdir(lang_dir)
+
+    lang_count = len(lang_files)
+    if lang_count != 2:
+        raise InvalidLangCount(
+            f"Expected 2 languages in {lang_dir}, found {lang_count}.")
+
+    LANGUAGE_MAPPINGS = {}
+    for lang_file in langs:
+        with open(os.path.join(lang_dir, lang_file),
+                  encoding='utf-8') as lang_handle:
+            lang_data = json.load(lang_file)
+        LANGUAGE_MAPPINGS[lang_data['short_name']] = Language(lang_data)
+
+
 def load_details(data_dir: str) -> BlogDetails:
     """Load extra details of the blog, e.g. the blog title."""
     details_path = os.path.join(data_dir, 'details.json')
@@ -411,14 +462,15 @@ def load_details(data_dir: str) -> BlogDetails:
 
 def load_posts(data_dir: str, blog_details: BlogDetails) -> typing.List[Post]:
     """Load post data from a directory."""
+    posts_dir = os.path.join(data_dir, 'posts')
     posts = []
     post_data_files = [
-        file_name for file_name in os.listdir(data_dir)
+        file_name for file_name in os.listdir(posts_dir)
         if file_name != 'details.json'
     ]
     first_post = _get_post_html_filename(post_data_files[0])
     for idx, post_file in enumerate(post_data_files):
-        post_data_path = _get_post_data_path(post_file, data_dir)
+        post_data_path = _get_post_data_path(post_file, posts_dir)
         prev_post = None
         next_post = None
         if idx > 0:
@@ -763,6 +815,11 @@ def _main(args: typing.List[str]):
 
     source_dir = 'test_posts'
     dest_dir = 'test_html'
+    try:
+        load_language_mappings(source_dir)
+    except InvalidLangCount as err:
+        sys.stderr.write('%s\n' % err)
+        sys.exit(1)
 
     if args.action == 'make_post':
         print('Make post')
