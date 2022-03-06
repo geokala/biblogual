@@ -86,7 +86,6 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 # pylint: enable=C0301
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
-LANGUAGE_MAPPINGS = None
 MOOD_EMOJI_MAPPINGS = {
     'happy': '🙂',
     'sad': '🙁',
@@ -100,18 +99,20 @@ EXPECTED_BOOTSTRAP_FILES = {
 }
 
 
-class Section:  # pylint: disable=R0903
+class Section:  # pylint: disable=R0903,R0902
     """A section of a blog post."""
     def __init__(self,
                  section_data: dict,
                  date: datetime,
-                 link_urls: typing.Optional[typing.List[str]]):
-        _validate_section_data(section_data)
+                 link_urls: typing.Optional[typing.List[str]],
+                 language_mappings: typing.Dict[str, Language]):
+        _validate_section_data(section_data, language_mappings)
         self.title = escape(section_data['title'])
         self.text = escape(section_data['text'])
         self.mood = escape(section_data.get('mood', ''))
         self.language = section_data['language']
-        self.flag = LANGUAGE_MAPPINGS[self.language].flag
+        self.language_mappings = language_mappings
+        self.flag = self.language_mappings[self.language].flag
         self.date = _get_date_string(date, self.language)
         self.links = []
         if link_urls:
@@ -130,8 +131,8 @@ class Section:  # pylint: disable=R0903
         """Get this section's HTML."""
         mood_string = ''
         if self.mood:
-            mood = LANGUAGE_MAPPINGS[self.language].mood
-            mood_emoji_name_mapping = MOOD_NAME_MAPPINGS[self.language].get(
+            mood = self.language_mappings[self.language].mood
+            mood_emoji_name_mapping = self.language_mappings[self.language].get(
                 self.mood)
             emoji = ''
             if mood_emoji_name_mapping:
@@ -155,7 +156,7 @@ class Section:  # pylint: disable=R0903
         )
 
 
-class Post:  # pylint: disable=R0903
+class Post:  # pylint: disable=R0903,R0902
     """A blog post."""
     def __init__(self,  # pylint: disable=R0913
                  sections: typing.List[Section],
@@ -164,7 +165,8 @@ class Post:  # pylint: disable=R0903
                  first_path: str,
                  next_path: typing.Optional[str],
                  prev_path: typing.Optional[str],
-                 blog_title: str):
+                 blog_title: str,
+                 language_mappings: typing.Dict[str, Language]):
         self.sections = sections
         self.html_filename = html_filename
         self.first_path = first_path
@@ -172,6 +174,7 @@ class Post:  # pylint: disable=R0903
         self.prev_path = prev_path or '#'
         self.date = date
         self.blog_title = blog_title
+        self.language_mappings = language_mappings
 
     def get_html(self) -> str:
         """Get this post's HTML."""
@@ -184,7 +187,7 @@ class Post:  # pylint: disable=R0903
             next_post=self.next_path,
             next_attrs=_get_header_link_attrs(self.next_path),
             blog_title=self.blog_title,
-            **get_navigation_link_text()
+            **get_navigation_link_text(self.language_mappings)
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -194,7 +197,8 @@ class Post:  # pylint: disable=R0903
 
 class Year:
     """An overview of a year of blog posts."""
-    def __init__(self, year: int, posts: typing.List[Post], blog_title: str):
+    def __init__(self, year: int, posts: typing.List[Post], blog_title: str,
+                 language_mappings: typing.Dict[str, Language]):
         self.year = year
         self.posts = posts
         self.html_filename = f'year_{self.year}.html'
@@ -202,6 +206,7 @@ class Year:
             section.language for section in posts[0].sections
         ])
         self.blog_title = blog_title
+        self.language_mappings = language_mappings
 
     def get_html(self) -> str:
         """Get this year's HTML."""
@@ -211,7 +216,7 @@ class Year:
             post_links1=self._get_post_links_html(self.languages[0]),
             post_links2=self._get_post_links_html(self.languages[1]),
             blog_title=self.blog_title,
-            **get_navigation_link_text()
+            **get_navigation_link_text(self.language_mappings)
         )
 
     def _get_post_links_html(self, language: str):
@@ -223,8 +228,8 @@ class Year:
         months_html_string = '\n'.join([
             month_html for month_html in months_html if month_html
         ])
-        posts_title = LANGUAGE_MAPPINGS[language].posts
-        flag = LANGUAGE_MAPPINGS[language].flag
+        posts_title = self.language_mappings[language].posts
+        flag = self.language_mappings[language].flag
         return (
             '<div class="ml-5 float-md-left">\n'
             f'<h2>{flag}{posts_title}</h2>\n'
@@ -262,11 +267,13 @@ class Year:
 class Index:
     """The top level index."""
     def __init__(self, years: typing.List[Year], first_path: str,
-                 blog_title: str):
+                 blog_title: str,
+                 language_mappings: typing.Dict[str, Language]):
         self.first_path = first_path
         self.years = years
         self.html_filename = 'index.html'
         self.blog_title = blog_title
+        self.language_mappings = language_mappings
 
     def _get_year_links_html(self):
         """Get the links for each year of blog posts."""
@@ -281,7 +288,7 @@ class Index:
             first_post=self.first_path,
             year_links=self._get_year_links_html(),
             blog_title=self.blog_title,
-            **get_navigation_link_text()
+            **get_navigation_link_text(self.language_mappings)
         )
 
     def get_html_path(self, html_dir: str) -> str:
@@ -332,12 +339,12 @@ class BlogDetails(TypedDict):
     allow_robots: str
 
 
-def get_navigation_link_text():
+def get_navigation_link_text(language_mappings):
     """Get the link text for navigation."""
     return {
         nav_name: '/'.join([
-            LANGUAGE_MAPPINGS[lang][nav_name].upper()
-            for lang in sorted(LANGUAGE_MAPPINGS)
+            language_mappings[lang][nav_name].upper()
+            for lang in sorted(language_mappings)
         ])
         for nav_name in ['first', 'previous', 'next', 'latest']
     }
@@ -356,7 +363,8 @@ def _get_header_link_attrs(target):
     return 'class="navbar-brand"'
 
 
-def _validate_section_data(section_data: dict):
+def _validate_section_data(section_data: dict,
+                           language_mappings: typing.Dict[str, Language]):
     """Generate a Section if given valid section data."""
     required_keys = ['title', 'text', 'language']
     optional_keys = ['mood', 'links']
@@ -377,11 +385,11 @@ def _validate_section_data(section_data: dict):
             f'The section contained: {contained}'
         )
 
-    if section_data['language'] not in LANGUAGE_MAPPINGS:
+    if section_data['language'] not in language_mappings:
         errors.append(
             'Language was {}, but must be one of: {}'.format(  # pylint: disable=C0209
                 section_data['language'],
-                ','.join(LANGUAGE_MAPPINGS.keys()),
+                ','.join(language_mappings.keys()),
             )
         )
 
@@ -425,9 +433,8 @@ class Language:  # pylint: disable=R0903
         self.moods = lang_dict['moods']
 
 
-def load_language_mappings(data_dir: str):
+def load_language_mappings(data_dir: str) -> typing.Dict[str, Language]:
     """Load the language mappings into the global variable."""
-    global LANGUAGE_MAPPINGS
     lang_dir = os.path.join(data_dir, 'langs')
     lang_files = os.listdir(lang_dir)
 
@@ -436,12 +443,13 @@ def load_language_mappings(data_dir: str):
         raise InvalidLangCount(
             f"Expected 2 languages in {lang_dir}, found {lang_count}.")
 
-    LANGUAGE_MAPPINGS = {}
-    for lang_file in langs:
+    language_mappings = {}
+    for lang_file in lang_files:
         with open(os.path.join(lang_dir, lang_file),
                   encoding='utf-8') as lang_handle:
-            lang_data = json.load(lang_file)
-        LANGUAGE_MAPPINGS[lang_data['short_name']] = Language(lang_data)
+            lang_data = json.load(lang_handle)
+        language_mappings[lang_data['short_name']] = Language(lang_data)
+    return language_mappings
 
 
 def load_details(data_dir: str) -> BlogDetails:
@@ -460,7 +468,10 @@ def load_details(data_dir: str) -> BlogDetails:
     }
 
 
-def load_posts(data_dir: str, blog_details: BlogDetails) -> typing.List[Post]:
+def load_posts(  # pylint: disable=R0914
+    data_dir: str, blog_details: BlogDetails,
+    language_mappings: typing.Dict[str, Language],
+) -> typing.List[Post]:
     """Load post data from a directory."""
     posts_dir = os.path.join(data_dir, 'posts')
     posts = []
@@ -488,7 +499,8 @@ def load_posts(data_dir: str, blog_details: BlogDetails) -> typing.List[Post]:
                 sections=[
                     Section(s,
                             date=date,
-                            link_urls=post_data.get('links'))
+                            link_urls=post_data.get('links'),
+                            language_mappings=language_mappings)
                     for s in sorted(post_data['sections'],
                                     key=lambda x: x['language'])
                 ],
@@ -498,6 +510,7 @@ def load_posts(data_dir: str, blog_details: BlogDetails) -> typing.List[Post]:
                 html_filename=_get_post_html_filename(post_file),
                 date=date,
                 blog_title=blog_details['title'],
+                language_mappings=language_mappings,
             ))
         except InvalidSectionData as err:
             raise InvalidPostData(  # pylint: disable=W0707
@@ -816,7 +829,7 @@ def _main(args: typing.List[str]):
     source_dir = 'test_posts'
     dest_dir = 'test_html'
     try:
-        load_language_mappings(source_dir)
+        language_mappings = load_language_mappings(source_dir)
     except InvalidLangCount as err:
         sys.stderr.write('%s\n' % err)
         sys.exit(1)
@@ -825,9 +838,9 @@ def _main(args: typing.List[str]):
         print('Make post')
     elif args.action == 'reconcile':
         blog_details = load_details(source_dir)
-        posts_data = load_posts(source_dir, blog_details)
+        posts_data = load_posts(source_dir, blog_details, language_mappings)
         check_html_dir_valid(dest_dir)
-        update_posts(posts_data, dest_dir, blog_details)
+        update_posts(posts_data, dest_dir, blog_details, language_mappings)
 
 
 if __name__ == '__main__':
