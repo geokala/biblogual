@@ -113,7 +113,8 @@ class Section:  # pylint: disable=R0903,R0902
         self.language = section_data['language']
         self.language_mappings = language_mappings
         self.flag = self.language_mappings[self.language].flag
-        self.date = _get_date_string(date, self.language)
+        self.date = _get_date_string(date, self.language,
+                                     self.language_mappings)
         self.links = []
         if link_urls:
             link_descriptions = [
@@ -243,7 +244,7 @@ class Year:
                           for post in self.posts if post.date.month == month]
         month_html = []
         if relevant_posts:
-            month_string = MONTH_MAPPINGS[language][month]
+            month_string = self.language_mappings[language].months[month][:3]
             month_html.append(f'<h3>{month_string}</h3>')
         dates_and_titles = {}
         for post in relevant_posts:
@@ -253,7 +254,8 @@ class Year:
                     break
         for date in sorted(dates_and_titles):
             title, post = dates_and_titles[date]
-            date_string = _get_date_string(post.date, language)
+            date_string = _get_date_string(post.date, language,
+                                           self.language_mappings)
             month_html.append(
                 f'<a href="{post.html_filename}">{date_string} - {title}'
                 '</a><br />')
@@ -350,9 +352,10 @@ def get_navigation_link_text(language_mappings):
     }
 
 
-def _get_date_string(date: datetime, language: str):
+def _get_date_string(date: datetime, language: str,
+                     language_mappings: typing.Dict[str, Language]):
     """Get the stringified date for the given language."""
-    month = MONTH_MAPPINGS[language][date.month]
+    month = language_mappings[language][date.month][:3]
     return f'{date.year} {month} {date.day}'
 
 
@@ -558,6 +561,7 @@ def update_file_if_needed(expected_content: str, path: str,
 
 
 def build_years_pages(posts: typing.List[Post],
+                      language_mappings: typing.Dict[str, Language],
                       blog_details: BlogDetails) -> typing.List[Year]:
     """Build the Year pages."""
     year_posts: typing.Dict[int, typing.List[Post]] = {}
@@ -566,12 +570,14 @@ def build_years_pages(posts: typing.List[Post],
         if year not in year_posts:
             year_posts[year]= []
         year_posts[year].append(post)
-    return [Year(year=year, posts=posts, blog_title=blog_details['title'])
+    return [Year(year=year, posts=posts, blog_title=blog_details['title'],
+                 language_mappings=language_mappings)
             for year, posts in year_posts.items()]
 
 
 def update_posts(posts: typing.List[Post], html_dir: str,
-                 blog_details: BlogDetails):
+                 blog_details: BlogDetails,
+                 language_mappings: typing.Dict[str, Language]):
     """Add new posts and update any existing posts that need updating."""
 
     updated = 0
@@ -590,7 +596,7 @@ def update_posts(posts: typing.List[Post], html_dir: str,
         print('Updated latest post.')
 
     updated_years = 0
-    years = build_years_pages(posts, blog_details)
+    years = build_years_pages(posts, language_mappings, blog_details)
     for year in years:
         html_content = year.get_html()
         html_path = year.get_html_path(html_dir)
@@ -600,7 +606,8 @@ def update_posts(posts: typing.List[Post], html_dir: str,
         print(f'Updated {updated_years}/{len(years)} year pages.')
 
     index = Index(years, first_path=posts[0].html_filename,
-                  blog_title=blog_details['title'])
+                  blog_title=blog_details['title'],
+                  language_mappings=language_mappings)
     if update_file_if_needed(index.get_html(), index.get_html_path(html_dir)):
         print('Updated index.')
 
@@ -661,7 +668,8 @@ def get_user_confirmation(message='Are these correct? (y/n): ') -> bool:
         print(f'{confirm} is not a valid response.')
 
 
-def get_links() -> typing.List[typing.Dict[str, str]]:
+def get_links(language_mappings: typing.Dict[str, Language]
+              ) -> typing.List[typing.Dict[str, str]]:
     """Get links to add to the post, if any."""
     links: typing.List[typing.Dict[str, str]] = []
     add_prompt = 'Would you like to add a link? (y/n): '
@@ -672,8 +680,8 @@ def get_links() -> typing.List[typing.Dict[str, str]]:
         link = {}
         link['url'] = input('Enter link URL: ').strip()
 
-        for lang in sorted(LANGUAGE_MAPPINGS):
-            lang_name = LANGUAGE_MAPPINGS[lang]['name']
+        for lang in sorted(language_mappings):
+            lang_name = language_mappings[lang].words['name']
             link[lang] = input(
                 f'Enter {lang_name} description for this URL: ')
 
@@ -681,23 +689,25 @@ def get_links() -> typing.List[typing.Dict[str, str]]:
             links.append(link)
 
 
-def get_custom_mood() -> typing.Tuple[str, str]:
+def get_custom_mood(language_mappings: typing.Dict[str, Language]
+                    ) -> typing.Tuple[str, str]:
     """Prompt the user for a custom mood."""
-    moods = {lang: '' for lang in LANGUAGE_MAPPINGS}
+    moods = {lang: '' for lang in language_mappings}
     while any(not mood for mood in moods.values()):
         for lang in sorted(moods):
-            lang_name = LANGUAGE_MAPPINGS[lang]['name']
+            lang_name = language_mappings[lang].words['name']
             moods[lang] = input(f'Enter {lang_name} mood:').strip()
         if get_user_confirmation():
-            moods = {lang: '' for lang in LANGUAGE_MAPPINGS}
+            moods = {lang: '' for lang in language_mappings}
     order = sorted(moods.keys())
     return moods[order[0]], moods[order[1]]
 
 
-def get_mood() -> typing.Tuple[str, str]:
+def get_mood(language_mappings: typing.Dict[str, Language]
+             ) -> typing.Tuple[str, str]:
     """Prompt the user to get their mood."""
     moods = sorted(
-        MOOD_NAME_MAPPINGS['dk'].items(),
+        language_mappings['dk'].moods.items(),
         key=lambda x: x[0],
     )
 
@@ -718,20 +728,22 @@ def get_mood() -> typing.Tuple[str, str]:
             selection = 0
         else:
             if selection == len(moods):
-                return get_custom_mood()
+                return get_custom_mood(language_mappings)
     return moods[selection - 1]
 
 
-def get_initial_section_data(tempdir: str) -> typing.List[SectionData]:
+def get_initial_section_data(tempdir: str,
+                             language_mappings: typing.Dict[str, Language],
+                             ) -> typing.List[SectionData]:
     """Get the text of the post sections from the user."""
     lang_paths = [
         os.path.join(tempdir, lang)
-        for lang in sorted(LANGUAGE_MAPPINGS)
+        for lang in sorted(language_mappings)
     ]
     file1, file2 = lang_paths
 
     for lang_file in lang_paths:
-        lang_text = LANGUAGE_MAPPINGS[lang_file.split('/')[-1]]
+        lang_text = language_mappings[lang_file.split('/')[-1]]
         with open(lang_file, 'w', encoding='utf-8') as handle:
             handle.writelines([
                 lang_text['title_placeholder'],
@@ -747,7 +759,7 @@ def get_initial_section_data(tempdir: str) -> typing.List[SectionData]:
             'language': lang,
             'mood': None,
         }
-        for lang in sorted(LANGUAGE_MAPPINGS)
+        for lang in sorted(language_mappings)
     ]
 
     for idx, lang_file in enumerate(lang_paths):
@@ -763,7 +775,8 @@ def get_initial_section_data(tempdir: str) -> typing.List[SectionData]:
     return sections
 
 
-def make_post(posts_path: str):
+def make_post(posts_path: str,
+              language_mappings: typing.Dict[str, Language]):
     """Make a new post"""
     new_post: PostData = {
         'date': datetime.now().strftime(DATETIME_FORMAT),
@@ -774,18 +787,20 @@ def make_post(posts_path: str):
     tempdir = mkdtemp(prefix='blogpost')
 
     try:
-        new_post['sections'] = get_initial_section_data(tempdir)
+        new_post['sections'] = get_initial_section_data(
+            tempdir, language_mappings,
+        )
     finally:
         for temp_lang in os.listdir(tempdir):
             temp_lang_path = os.path.join(tempdir, temp_lang)
             os.unlink(temp_lang_path)
         os.rmdir(tempdir)
 
-    mood = get_mood()
+    mood = get_mood(language_mappings)
     new_post['sections'][0]['mood'] = mood[0]
     new_post['sections'][1]['mood'] = mood[1]
 
-    links = get_links()
+    links = get_links(language_mappings)
     for link in links:
         new_post['links'].append(link['url'])
         for section in new_post['sections']:
@@ -831,7 +846,7 @@ def _main(args: typing.List[str]):
     try:
         language_mappings = load_language_mappings(source_dir)
     except InvalidLangCount as err:
-        sys.stderr.write('%s\n' % err)
+        sys.stderr.write(f'{err}\n')
         sys.exit(1)
 
     if args.action == 'make_post':
