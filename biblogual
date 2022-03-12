@@ -171,7 +171,7 @@ class Section:  # pylint: disable=R0903,R0902
         if self.mood:
             mood = self.language_mappings[self.language].words['mood']
             mood_emoji_name_mapping = self.language_mappings[
-                self.language].moods[self.mood]
+                self.language].moods.get(self.mood)
             emoji = ''
             if mood_emoji_name_mapping:
                 emoji = MOOD_EMOJI_MAPPINGS[mood_emoji_name_mapping] + ' '
