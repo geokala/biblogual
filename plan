@@ -3,7 +3,6 @@ Objectives:
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
 
 Steps:
-  - Finish sorting language mappings stuff (don't use global)
   - Check web dir is writable
   - Code locations in (~/.biblogual/posts (auto-create); openbsd httpd's location (check perms and complain if bad)
 
