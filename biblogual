@@ -365,7 +365,7 @@ def get_navigation_link_text(language_mappings):
     """Get the link text for navigation."""
     return {
         nav_name: '/'.join([
-            language_mappings[lang][nav_name].upper()
+            language_mappings[lang].words[nav_name].upper()
             for lang in sorted(language_mappings)
         ])
         for nav_name in ['first', 'previous', 'next', 'latest']
