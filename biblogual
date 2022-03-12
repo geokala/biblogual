@@ -842,7 +842,7 @@ def _main(args: typing.List[str]):
         'reconcile',
         help='Bring posts into line with template/data changes.')
 
-    parsed_args = parser.parse_args(args)
+    parsed_args = parser.parse_args(args[1:])
 
     source_dir = 'test_posts'
     dest_dir = 'test_html'
