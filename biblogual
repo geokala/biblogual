@@ -132,7 +132,11 @@ class Language:  # pylint: disable=R0903
             placeholder: lang_dict[f'{placeholder}_placeholder']  # type: ignore
             for placeholder in ['title', 'text']
         }
-        self.months = lang_dict['months']
+        self.months = {
+            # So that we can lookup by the datetime's month number
+            pos + 1: month
+            for pos, month in enumerate(lang_dict['months'])
+        }
         self.moods = lang_dict['moods']
 
 
