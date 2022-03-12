@@ -99,6 +99,43 @@ EXPECTED_BOOTSTRAP_FILES = {
 }
 
 
+class LangData(TypedDict):
+    """The dict structure of language json files."""
+    short_name: str
+    name: str
+    flag: str
+    mood: str
+    posts: str
+    title_placeholder: str
+    text_placeholder: str
+    first: str
+    previous: str
+    next: str
+    latest: str
+    months: typing.List[str]
+    moods: typing.Dict[str, str]
+
+
+class Language:  # pylint: disable=R0903
+    """A language as used by the blog."""
+    def __init__(self, lang_dict: LangData):
+        self.short_name = lang_dict['short_name']
+        self.flag = lang_dict['flag']
+        self.words = {
+            # Have to ignore type checking here because mypy doesn't cope with
+            # variable lookups
+            word: lang_dict[word]  # type: ignore
+            for word in ['name', 'mood', 'posts',
+                         'first', 'previous', 'next', 'latest']
+        }
+        self.placeholders = {
+            placeholder: lang_dict[f'{placeholder}_placeholder']  # type: ignore
+            for placeholder in ['title', 'text']
+        }
+        self.months = lang_dict['months']
+        self.moods = lang_dict['moods']
+
+
 class Section:  # pylint: disable=R0903,R0902
     """A section of a blog post."""
     def __init__(self,
@@ -132,9 +169,9 @@ class Section:  # pylint: disable=R0903,R0902
         """Get this section's HTML."""
         mood_string = ''
         if self.mood:
-            mood = self.language_mappings[self.language].mood
-            mood_emoji_name_mapping = self.language_mappings[self.language].get(
-                self.mood)
+            mood = self.language_mappings[self.language].words['mood']
+            mood_emoji_name_mapping = self.language_mappings[
+                self.language].moods[self.mood]
             emoji = ''
             if mood_emoji_name_mapping:
                 emoji = MOOD_EMOJI_MAPPINGS[mood_emoji_name_mapping] + ' '
@@ -229,7 +266,7 @@ class Year:
         months_html_string = '\n'.join([
             month_html for month_html in months_html if month_html
         ])
-        posts_title = self.language_mappings[language].posts
+        posts_title = self.language_mappings[language].words['posts']
         flag = self.language_mappings[language].flag
         return (
             '<div class="ml-5 float-md-left">\n'
@@ -302,23 +339,6 @@ class InvalidSectionData(Exception):
     """Raised when attempting to generate a section from invalid data."""
 
 
-class LangData(TypedDict):
-    """The dict structure of language json files."""
-    short_name: str
-    name: str
-    flag: str
-    mood: str
-    posts: str
-    title_placeholder: str
-    text_placeholder: str
-    first: str
-    previous: str
-    next: str
-    latest: str
-    months: typing.List[str]
-    moods: typing.Dict[str, str]
-
-
 class SectionData(TypedDict):
     """The dict structure of a section as contained in the json file."""
     title: str
@@ -355,7 +375,7 @@ def get_navigation_link_text(language_mappings):
 def _get_date_string(date: datetime, language: str,
                      language_mappings: typing.Dict[str, Language]):
     """Get the stringified date for the given language."""
-    month = language_mappings[language][date.month][:3]
+    month = language_mappings[language].months[date.month][:3]
     return f'{date.year} {month} {date.day}'
 
 
@@ -416,24 +436,6 @@ def _get_post_html_filename(post_file: str) -> str:
 
 class InvalidLangCount(Exception):
     """Raised when an invalid amount of languages is provided."""
-
-
-class Language:  # pylint: disable=R0903
-    """A language as used by the blog."""
-    def __init__(self, lang_dict: LangData):
-        self.short_name = lang_dict['short_name']
-        self.flag = lang_dict['flag']
-        self.words = {
-            word: lang_dict[word]
-            for word in ['name', 'mood', 'posts',
-                         'first', 'previous', 'next', 'latest']
-        }
-        self.placeholders = {
-            placeholder: lang_dict[f'{placeholder}_placeholder']
-            for placeholder in ['title', 'text']
-        }
-        self.months = lang_dict['months']
-        self.moods = lang_dict['moods']
 
 
 def load_language_mappings(data_dir: str) -> typing.Dict[str, Language]:
@@ -743,11 +745,12 @@ def get_initial_section_data(tempdir: str,
     file1, file2 = lang_paths
 
     for lang_file in lang_paths:
-        lang_text = language_mappings[lang_file.split('/')[-1]]
+        lang_text = language_mappings[
+            lang_file.split('/')[-1]].placeholders
         with open(lang_file, 'w', encoding='utf-8') as handle:
             handle.writelines([
-                lang_text['title_placeholder'],
-                lang_text['text_placeholder'],
+                lang_text['title'],
+                lang_text['text'],
             ])
     subprocess.call(f"vim {file1} -S <(echo 'vs {file2}')")
 
@@ -839,7 +842,7 @@ def _main(args: typing.List[str]):
         'reconcile',
         help='Bring posts into line with template/data changes.')
 
-    args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
     source_dir = 'test_posts'
     dest_dir = 'test_html'
@@ -849,9 +852,9 @@ def _main(args: typing.List[str]):
         sys.stderr.write(f'{err}\n')
         sys.exit(1)
 
-    if args.action == 'make_post':
+    if parsed_args.action == 'make_post':
         print('Make post')
-    elif args.action == 'reconcile':
+    elif parsed_args.action == 'reconcile':
         blog_details = load_details(source_dir)
         posts_data = load_posts(source_dir, blog_details, language_mappings)
         check_html_dir_valid(dest_dir)
