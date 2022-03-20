@@ -10,7 +10,7 @@ import subprocess
 import sys
 from tempfile import mkdtemp
 import typing
-from typing_extensions import TypedDict
+from typing import TypedDict
 
 DISABLED_NAVBAR_LINK_ATTRS = \
     'style="cursor:default" class="text-muted navbar-brand"'
