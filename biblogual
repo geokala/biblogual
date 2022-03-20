@@ -102,42 +102,62 @@ EXPECTED_BOOTSTRAP_FILES = {
 class LangData(TypedDict):
     """The dict structure of language json files."""
     short_name: str
-    name: str
     flag: str
-    mood: str
-    posts: str
-    title_placeholder: str
-    text_placeholder: str
-    first: str
-    previous: str
-    next: str
-    latest: str
+    words: typing.Dict[str, str]
+    placeholders: typing.Dict[str, str]
     months: typing.List[str]
     moods: typing.Dict[str, str]
 
+
+class LanguageValidationError(Exception):
+    """Raised when a loaded language json is invalid."""
 
 class Language:  # pylint: disable=R0903
     """A language as used by the blog."""
     def __init__(self, lang_dict: LangData):
         self.short_name = lang_dict['short_name']
         self.flag = lang_dict['flag']
-        self.words = {
-            # Have to ignore type checking here because mypy doesn't cope with
-            # variable lookups
-            word: lang_dict[word]  # type: ignore
-            for word in ['name', 'mood', 'posts',
-                         'first', 'previous', 'next', 'latest']
-        }
-        self.placeholders = {
-            placeholder: lang_dict[f'{placeholder}_placeholder']  # type: ignore
-            for placeholder in ['title', 'text']
-        }
+        self.words = lang_dict['words']
+        self.placeholders = lang_dict['placeholders']
         self.months = {
             # So that we can lookup by the datetime's month number
             pos + 1: month
             for pos, month in enumerate(lang_dict['months'])
         }
         self.moods = lang_dict['moods']
+
+        self._validate()
+
+    def _validate(self):
+        problems = []
+        expected_words = {'name', 'mood', 'posts',
+                          'first', 'previous', 'next', 'latest'}
+        expected_placeholders = {'title', 'text'}
+
+        if len(self.months) != 12:
+            problems.append('Expected 12 months.')
+
+        missing_words = self.words.keys() - expected_words
+        if missing_words:
+            problems.append(f'Missing word mappings: {missing_words}')
+        unexpected_words = expected_words - self.words.keys()
+        if unexpected_words:
+            problems.append(f'Unexpected word mappings: {unexpected_words}')
+
+        missing_placeholders = \
+            self.placeholders.keys() - expected_placeholders
+        if missing_placeholders:
+            problems.append(f'Missing placeholders: {missing_placeholders}')
+        unexpected_placeholders = \
+            expected_placeholders - self.placeholders.keys()
+        if unexpected_placeholders:
+            problems.append(
+                f'Unexpected placeholders: {unexpected_placeholders}')
+
+        if problems:
+            problem_output = '\n'.join(problems)
+            raise LanguageValidationError(
+                f"Problems found for {self.short_name}:\n{problem_output}")
 
 
 class Section:  # pylint: disable=R0903,R0902
