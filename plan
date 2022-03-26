@@ -5,6 +5,7 @@ Objectives:
 Steps:
   - Check web dir is writable
   - Code locations in (~/.biblogual/posts (auto-create); openbsd httpd's location (check perms and complain if bad)
+  - Note to make sure httpd is configured to send UTF-8 content-type header (check with urllib?)
 
 Later:
   RSS

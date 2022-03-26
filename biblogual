@@ -2,6 +2,7 @@
 """Generate pages for a static blog."""
 from argparse import ArgumentParser
 from datetime import datetime
+import getpass
 from hashlib import sha256
 from html import escape
 import json
@@ -651,35 +652,90 @@ def update_posts(posts: typing.List[Post], html_dir: str,
 
 def check_html_dir_valid(html_dir: str):
     """Check that the targeted HTML dir is valid."""
+    user = getpass.getuser()
+    dirs_to_existing = [html_dir]
+    check_dir = os.path.dirname(html_dir)
+    while True:
+        if os.path.exists(check_dir):
+            break
+        dirs_to_existing.append(check_dir)
+        check_dir = os.path.dirname(check_dir)
+
+    base_ownership = 'root.www'
+    blog_dir_ownership = f'{user}.www'
+    # Needs exec bit to allow traversing to subfolders
+    perms = '751'
+
+    if dirs_to_existing:
+        dirs_to_existing.reverse()
+
+        dir_commands = f'''\nThe base directories can be set up with:
+doas ksh -c 'mkdir -p {html_dir}/\n'''
+
+        base_not_existing = dirs_to_existing[0]
+        dir_commands += f'chmod -R {perms} {base_not_existing}\n'
+        if len(dirs_to_existing) > 1:
+            dir_commands += f'chown -R {base_ownership} {base_not_existing}\n'
+        dir_commands += f"chown -R {blog_dir_ownership} {html_dir}'\n"
+
     print('Checking HTML dir exists')
     if not os.path.isdir(html_dir):
         raise InvalidHTMLDir(
-            f'HTML destination dir does not exist: {html_dir}')
+            f'HTML destination dir does not exist: {html_dir}\n'
+            f'{dir_commands}')
 
     print('Validating bootstrap files')
     bootstrap_path = os.path.join(html_dir, 'bootstrap')
     bootstrap_files = {}
-    for bs_file in os.listdir(bootstrap_path):
+    try:
+        existing_files = os.listdir(bootstrap_path)
+    except FileNotFoundError:
+        # The dir does not exist, so clearly there are no files
+        existing_files = []
+    for bs_file in existing_files:
         bs_path = os.path.join(bootstrap_path, bs_file)
         with open(bs_path, 'rb') as bs_handle:
             bootstrap_files[bs_file] = sha256(
                 bs_handle.read()).hexdigest()
+
     if bootstrap_files != EXPECTED_BOOTSTRAP_FILES:
+        bs_commands = f'''\nThe bootstrap files can be set up with:
+mkdir -p {bootstrap_path}\n'''
+        repo_bs_path = 'test_html/bootstrap'
+        exc_path = os.path.dirname(__file__)
+        local_bs_files = os.path.join(exc_path, repo_bs_path)
+        online_bs_files = os.path.join(
+            'https://raw.githubusercontent.com/geokala/biblogual/main',
+            repo_bs_path,
+        )
+        for bs_file in EXPECTED_BOOTSTRAP_FILES:
+            existing = bootstrap_files.get(bs_file)
+            if existing != EXPECTED_BOOTSTRAP_FILES[bs_file]:
+                dest_path = os.path.join(bootstrap_path, bs_file)
+
+                local_path = os.path.join(local_bs_files, bs_file)
+                if os.path.exists(local_path):
+                    bs_commands += f'cp {local_path} {dest_path}\n'
+                else:
+                    # The script is being used standalone, give curls
+                    remote_path = os.path.join(online_bs_files, bs_file)
+                    bs_commands += f'curl -o {dest_path} {remote_path}\n'
+        bs_commands = bs_commands.rstrip()
+
+        expected_output='\n'.join(
+            ' '.join(fn_hash)
+            for fn_hash in EXPECTED_BOOTSTRAP_FILES.items()
+        )
+        seen_output='The following files were seen:\n' + '\n'.join(
+            ' '.join(fn_hash)
+            for fn_hash in bootstrap_files.items()
+        ) if bootstrap_files else 'No files were seen.'
         raise InvalidHTMLDir(
             'Expected bootstrap files not found.\n'  # pylint: disable=C0209
             'Expected to see the following files with listed SHA256 hashes:\n'
-            '{expected_output}\n'
-            'The following files were seen:\n'
-            '{seen_output}'.format(
-                expected_output='\n'.join(
-                    ' '.join(fn_hash)
-                    for fn_hash in EXPECTED_BOOTSTRAP_FILES.items()
-                ),
-                seen_output='\n'.join(
-                    ' '.join(fn_hash)
-                    for fn_hash in bootstrap_files.items()
-                ),
-            )
+            f'{expected_output}\n'
+            f'{seen_output}\n'
+            f'{bs_commands}'
         )
 
 
@@ -869,7 +925,7 @@ def _main(args: typing.List[str]):
     parsed_args = parser.parse_args(args[1:])
 
     source_dir = 'test_posts'
-    dest_dir = 'test_html'
+    dest_dir = f'/var/www/htdocs/default/blog/{getpass.getuser()}'
     try:
         language_mappings = load_language_mappings(source_dir)
     except InvalidLangCount as err:
