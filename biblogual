@@ -98,6 +98,7 @@ EXPECTED_BOOTSTRAP_FILES = {
     'bootstrap-grid.min.css': '158cf68fff05fa7b67dab1734752e67e4d4dcf08a3bbb3e046d5cd9cbc3bd86b',  # pylint: disable=C0301
     'bootstrap-reboot.min.css': 'cd3d5950dfe3d62fda39a009a26977aeef162d133c4a264ae5812bfb5489c5b8',  # pylint: disable=C0301
 }
+GITHUB_PATH = 'https://raw.githubusercontent.com/geokala/biblogual/main'
 
 
 class LangData(TypedDict):
@@ -642,16 +643,8 @@ def update_posts(posts: typing.List[Post], html_dir: str,
     if update_file_if_needed(robots_content, get_robots_path(html_dir)):
         print('Updated robots.txt')
 
-    favicon_path = get_favicon_path(html_dir)
-    if not os.path.exists(favicon_path):
-        sys.stderr.write(
-            f'WARNING: Favicon does not exist at {favicon_path}.\n'
-            'Consider optionally editing and using the provided '
-            'placeholder.\n')
 
-
-def check_html_dir_valid(html_dir: str):
-    """Check that the targeted HTML dir is valid."""
+def _check_html_dir_exists(html_dir: str):
     user = getpass.getuser()
     dirs_to_existing = [html_dir]
     check_dir = os.path.dirname(html_dir)
@@ -684,6 +677,8 @@ doas ksh -c 'mkdir -p {html_dir}/\n'''
             f'HTML destination dir does not exist: {html_dir}\n'
             f'{dir_commands}')
 
+
+def _check_bootstrap_files(html_dir: str):  # pylint: disable=R0914
     print('Validating bootstrap files')
     bootstrap_path = os.path.join(html_dir, 'bootstrap')
     bootstrap_files = {}
@@ -704,13 +699,10 @@ mkdir -p {bootstrap_path}\n'''
         repo_bs_path = 'test_html/bootstrap'
         exc_path = os.path.dirname(__file__)
         local_bs_files = os.path.join(exc_path, repo_bs_path)
-        online_bs_files = os.path.join(
-            'https://raw.githubusercontent.com/geokala/biblogual/main',
-            repo_bs_path,
-        )
-        for bs_file in EXPECTED_BOOTSTRAP_FILES:
+        online_bs_files = os.path.join(GITHUB_PATH, repo_bs_path)
+        for bs_file, expected_hash in EXPECTED_BOOTSTRAP_FILES.items():
             existing = bootstrap_files.get(bs_file)
-            if existing != EXPECTED_BOOTSTRAP_FILES[bs_file]:
+            if existing != expected_hash:
                 dest_path = os.path.join(bootstrap_path, bs_file)
 
                 local_path = os.path.join(local_bs_files, bs_file)
@@ -737,6 +729,34 @@ mkdir -p {bootstrap_path}\n'''
             f'{seen_output}\n'
             f'{bs_commands}'
         )
+
+
+def _check_favicon(html_dir: str):
+    print('Checking favicon')
+    favicon_path = get_favicon_path(html_dir)
+    if not os.path.exists(favicon_path):
+        placeholder_favicon = 'placeholder_favicon.jpg'
+        exc_path = os.path.dirname(__file__)
+        local_favicon = os.path.join(exc_path, placeholder_favicon)
+        if os.path.exists(local_favicon):
+            command = f'cp {local_favicon} {favicon_path}'
+        else:
+            remote_path = os.path.join(GITHUB_PATH, placeholder_favicon)
+            command = f'curl -o {favicon_path} {remote_path}'
+
+        sys.stderr.write(
+            f'WARNING: Favicon does not exist at {favicon_path}.\n'
+            'Consider optionally editing and using the provided '
+            'placeholder.\n'
+            f'You can copy the placeholder with:\n{command}\n'
+        )
+
+
+def check_html_dir_valid(html_dir: str):
+    """Check that the targeted HTML dir is valid."""
+    _check_html_dir_exists(html_dir)
+    _check_bootstrap_files(html_dir)
+    _check_favicon(html_dir)
 
 
 def get_user_confirmation(message='Are these correct? (y/n): ') -> bool:
