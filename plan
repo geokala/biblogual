@@ -3,9 +3,10 @@ Objectives:
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
 
 Steps:
-  - Check web dir is writable
-  - Code locations in (~/.biblogual/posts (auto-create); openbsd httpd's location (check perms and complain if bad)
-  - Note to make sure httpd is configured to send UTF-8 content-type header (check with urllib?)
+  - Update check_languages to provide helpful commands if wanting to use default languages
+  - Make check_details do something
+  - Refactor code for providing commands to copy from local/remote to destination
+  - Change data_dir to profile_dir across all of biblogual
 
 Later:
   RSS

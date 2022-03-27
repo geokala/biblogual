@@ -463,19 +463,22 @@ def _get_post_html_filename(post_file: str) -> str:
     return name + '.html'
 
 
+def _get_language_path(profile_dir: str) -> str:
+    return os.path.join(data_dir, 'langs')
+
+
+def _get_posts_path(profile_dir: str) -> str:
+    return os.path.join(profile_dir, 'posts')
+
+
 class InvalidLangCount(Exception):
     """Raised when an invalid amount of languages is provided."""
 
 
 def load_language_mappings(data_dir: str) -> typing.Dict[str, Language]:
     """Load the language mappings into the global variable."""
-    lang_dir = os.path.join(data_dir, 'langs')
+    lang_dir = _get_language_path(data_dir)
     lang_files = os.listdir(lang_dir)
-
-    lang_count = len(lang_files)
-    if lang_count != 2:
-        raise InvalidLangCount(
-            f"Expected 2 languages in {lang_dir}, found {lang_count}.")
 
     language_mappings = {}
     for lang_file in lang_files:
@@ -507,7 +510,7 @@ def load_posts(  # pylint: disable=R0914
     language_mappings: typing.Dict[str, Language],
 ) -> typing.List[Post]:
     """Load post data from a directory."""
-    posts_dir = os.path.join(data_dir, 'posts')
+    posts_dir = _get_posts_path(data_dir)
     posts = []
     post_data_files = [
         file_name for file_name in os.listdir(posts_dir)
@@ -762,6 +765,23 @@ def check_html_dir_valid(html_dir: str):
     _check_favicon(html_dir)
 
 
+def check_language_mappings(profile_dir: str):
+    """Check that two language mappings are present."""
+    lang_dir = _get_language_path(profile_dir)
+    lang_files = os.listdir(lang_dir)
+
+    lang_count = len(lang_files)
+    if lang_count != 2:
+        raise InvalidLangCount(
+            f"Expected 2 languages in {lang_dir}, found {lang_count}.")
+
+
+
+def check_details(profile_dir: str):
+    # TODO
+    pass
+
+
 def get_user_confirmation(message='Are these correct? (y/n): ') -> bool:
     """Prompt the user to see if something is correct."""
     while True:
@@ -947,19 +967,27 @@ def _main(args: typing.List[str]):
 
     parsed_args = parser.parse_args(args[1:])
 
-    source_dir = 'test_posts'
+    data_dir = os.path.expanduser('~/.biblogual')
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, mode=0o700)
+        os.makedirs(_get_language_path(data_dir), mode=0o700)
+        os.makedirs(_get_posts_path(data_dir), mode=0o700)
     dest_dir = f'/var/www/htdocs/default/blog/{getpass.getuser()}'
+
+    check_language_mappings(data_dir)
+
     try:
-        language_mappings = load_language_mappings(source_dir)
+        language_mappings = load_language_mappings(data_dir)
     except InvalidLangCount as err:
         sys.stderr.write(f'{err}\n')
         sys.exit(1)
 
     if parsed_args.action == 'make_post':
-        print('Make post')
+        make_post(source_dir, language_mappings)
     elif parsed_args.action == 'reconcile':
-        blog_details = load_details(source_dir)
-        posts_data = load_posts(source_dir, blog_details, language_mappings)
+        check_details(data_dir)
+        blog_details = load_details(data_dir)
+        posts_data = load_posts(data_dir, blog_details, language_mappings)
         check_html_dir_valid(dest_dir)
         update_posts(posts_data, dest_dir, blog_details, language_mappings)
 
