@@ -19,6 +19,7 @@ DISABLED_NAVBAR_LINK_ATTRS = \
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head profile="http://www.w3.org/2005/10/profile">
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 <title>{blog_title}</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 <link rel="icon" 
@@ -42,6 +43,7 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head profile="http://www.w3.org/2005/10/profile">
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 <title>{{blog_title}}</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 <link rel="icon" 
@@ -64,6 +66,7 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head profile="http://www.w3.org/2005/10/profile">
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 <title>{{blog_title}} - {{year}}</title>
 <link rel="stylesheet" type="text/css" href="./bootstrap/bootstrap.min.css">
 <link rel="icon" 
