@@ -4,7 +4,6 @@ Objectives:
 
 Steps:
   - Update check_languages to provide helpful commands if wanting to use default languages
-  - Change data_dir to profile_dir across all of biblogual
   - set_title and set_robots (allow|disallow) commands
 
 Later:
