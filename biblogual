@@ -464,7 +464,7 @@ def _get_post_html_filename(post_file: str) -> str:
 
 
 def _get_language_path(profile_dir: str) -> str:
-    return os.path.join(data_dir, 'langs')
+    return os.path.join(profile_dir, 'langs')
 
 
 def _get_posts_path(profile_dir: str) -> str:
@@ -703,21 +703,12 @@ def _check_bootstrap_files(html_dir: str):  # pylint: disable=R0914
         bs_commands = f'''\nThe bootstrap files can be set up with:
 mkdir -p {bootstrap_path}\n'''
         repo_bs_path = 'test_html/bootstrap'
-        exc_path = os.path.dirname(__file__)
-        local_bs_files = os.path.join(exc_path, repo_bs_path)
-        online_bs_files = os.path.join(GITHUB_PATH, repo_bs_path)
         for bs_file, expected_hash in EXPECTED_BOOTSTRAP_FILES.items():
             existing = bootstrap_files.get(bs_file)
             if existing != expected_hash:
                 dest_path = os.path.join(bootstrap_path, bs_file)
-
-                local_path = os.path.join(local_bs_files, bs_file)
-                if os.path.exists(local_path):
-                    bs_commands += f'cp {local_path} {dest_path}\n'
-                else:
-                    # The script is being used standalone, give curls
-                    remote_path = os.path.join(online_bs_files, bs_file)
-                    bs_commands += f'curl -o {dest_path} {remote_path}\n'
+                local_path = os.path.join(repo_bs_path, bs_file)
+                bs_commands += _get_cp_or_curl(local_path, dest_path)
         bs_commands = bs_commands.rstrip()
 
         expected_output='\n'.join(
@@ -741,21 +732,22 @@ def _check_favicon(html_dir: str):
     print('Checking favicon')
     favicon_path = get_favicon_path(html_dir)
     if not os.path.exists(favicon_path):
-        placeholder_favicon = 'placeholder_favicon.jpg'
-        exc_path = os.path.dirname(__file__)
-        local_favicon = os.path.join(exc_path, placeholder_favicon)
-        if os.path.exists(local_favicon):
-            command = f'cp {local_favicon} {favicon_path}'
-        else:
-            remote_path = os.path.join(GITHUB_PATH, placeholder_favicon)
-            command = f'curl -o {favicon_path} {remote_path}'
-
+        command = _get_cp_or_curl('placeholder_favicon.jpg', favicon_path)
         sys.stderr.write(
             f'WARNING: Favicon does not exist at {favicon_path}.\n'
             'Consider optionally editing and using the provided '
             'placeholder.\n'
-            f'You can copy the placeholder with:\n{command}\n'
+            f'You can copy the placeholder with:\n{command}'
         )
+
+
+def _get_cp_or_curl(source_path: str, dest_path: str):
+    exc_path = os.path.dirname(__file__)
+    local_source = os.path.join(exc_path, source_path)
+    if os.path.exists(local_source):
+        return f'cp {local_source} {dest_path}\n'
+    remote_source = os.path.join(GITHUB_PATH, source_path)
+    return f'curl -o {dest_path} {remote_source}\n'
 
 
 def check_html_dir_valid(html_dir: str):
@@ -778,6 +770,7 @@ def check_language_mappings(profile_dir: str):
 
 
 def check_details(profile_dir: str):
+    """Check that the extra details are set correctly in the profile."""
     # TODO
     pass
 
@@ -983,7 +976,7 @@ def _main(args: typing.List[str]):
         sys.exit(1)
 
     if parsed_args.action == 'make_post':
-        make_post(source_dir, language_mappings)
+        make_post(data_dir, language_mappings)
     elif parsed_args.action == 'reconcile':
         check_details(data_dir)
         blog_details = load_details(data_dir)
