@@ -4,9 +4,8 @@ Objectives:
 
 Steps:
   - Update check_languages to provide helpful commands if wanting to use default languages
-  - Make check_details do something
-  - Refactor code for providing commands to copy from local/remote to destination
   - Change data_dir to profile_dir across all of biblogual
+  - set_title and set_robots (allow|disallow) commands
 
 Later:
   RSS

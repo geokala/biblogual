@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 """Generate pages for a static blog."""
+# Don't alert on the file being too long, it's deliberately a single file app with no deps.
+# pylint: disable=C0302
 from argparse import ArgumentParser
 from datetime import datetime
 import getpass
@@ -384,10 +386,14 @@ class PostData(TypedDict):
     sections: typing.List[SectionData]
 
 
+class InvalidDetails(Exception):
+    """Raised when blog details are not correctly set."""
+
+
 class BlogDetails(TypedDict):
     """The dict structure of the blog details."""
     title: str
-    allow_robots: str
+    allow_robots: typing.Optional[bool]
 
 
 def get_navigation_link_text(language_mappings):
@@ -489,9 +495,13 @@ def load_language_mappings(data_dir: str) -> typing.Dict[str, Language]:
     return language_mappings
 
 
-def load_details(data_dir: str) -> BlogDetails:
+def _get_details_path(profile_dir: str) -> str:
+    return os.path.join(profile_dir, 'details.json')
+
+
+def load_details(profile_dir: str, allow_missing: bool=False) -> BlogDetails:
     """Load extra details of the blog, e.g. the blog title."""
-    details_path = os.path.join(data_dir, 'details.json')
+    details_path = _get_details_path(profile_dir)
     expected_keys = {'title', 'allow_robots'}
     with open(details_path, encoding='utf-8') as details_handle:
         data = json.load(details_handle)
@@ -499,9 +509,15 @@ def load_details(data_dir: str) -> BlogDetails:
     if unknown_keys:
         sys.stderr.write(
             f'Unknown keys found in blog details: {unknown_keys}\n')
+    if not allow_missing:
+        missing_keys = ','.join([key for key in ['title', 'allow_robots']
+                                 if key not in data])
+        if missing_keys:
+            raise InvalidDetails(
+                f'Keys missing from details: {missing_keys}')
     return {
-        'title': data['title'],
-        'allow_robots': data['allow_robots'],
+        'title': data.get('title', ''),
+        'allow_robots': data.get('allow_robots'),
     }
 
 
@@ -768,11 +784,27 @@ def check_language_mappings(profile_dir: str):
             f"Expected 2 languages in {lang_dir}, found {lang_count}.")
 
 
-
 def check_details(profile_dir: str):
     """Check that the extra details are set correctly in the profile."""
-    # TODO
-    pass
+    details_path = _get_details_path(profile_dir)
+    prog = sys.argv[0]
+    set_title = f'"{prog} set_title"'
+    set_robots = f'"{prog} set_robots <allow|disallow>"'
+    if not os.path.exists(details_path):
+        data: BlogDetails = {'title': '', 'allow_robots': None}
+
+        raise InvalidDetails(
+            'Blog details are not configured.\n'
+            f'Run {set_title} or {set_robots}'
+        )
+    data = load_details(profile_dir, allow_missing=True)
+    problems = []
+    if not data['title']:
+        problems.append(f'Title not set. Run {set_title}')
+    if data['allow_robots'] is None:
+        problems.append(f'Robot permissions not set. Run {set_robots}')
+    if problems:
+        raise InvalidDetails('\n'.join(problems))
 
 
 def get_user_confirmation(message='Are these correct? (y/n): ') -> bool:
