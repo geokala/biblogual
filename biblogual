@@ -499,12 +499,21 @@ def _get_details_path(profile_dir: str) -> str:
     return os.path.join(profile_dir, 'details.json')
 
 
+class InvalidBlogTitle(Exception):
+    """Raised when attempting to set an invalid value for the blog title."""
+
+
 def load_details(profile_dir: str, allow_missing: bool=False) -> BlogDetails:
     """Load extra details of the blog, e.g. the blog title."""
     details_path = _get_details_path(profile_dir)
     expected_keys = {'title', 'allow_robots'}
-    with open(details_path, encoding='utf-8') as details_handle:
-        data = json.load(details_handle)
+    data: BlogDetails = {'title': '', 'allow_robots': None}
+    try:
+        with open(details_path, encoding='utf-8') as details_handle:
+            data.update(json.load(details_handle))
+    except FileNotFoundError:
+        if not allow_missing:
+            raise
     unknown_keys = ','.join(set(data).difference(expected_keys))
     if unknown_keys:
         sys.stderr.write(
@@ -515,10 +524,28 @@ def load_details(profile_dir: str, allow_missing: bool=False) -> BlogDetails:
         if missing_keys:
             raise InvalidDetails(
                 f'Keys missing from details: {missing_keys}')
-    return {
-        'title': data.get('title', ''),
-        'allow_robots': data.get('allow_robots'),
-    }
+    return data
+
+
+def set_blog_title(profile_dir: str, title: str):
+    """Update the details, setting the title of the blog."""
+    if not title:
+        raise InvalidBlogTitle("The blog title must not be empty.")
+    details = load_details(profile_dir, allow_missing=True)
+    details['title'] = title
+    with open(_get_details_path(profile_dir), 'w',
+              encoding='utf-8') as details_handle:
+        json.dump(details, details_handle)
+
+
+def set_robots_allowed(profile_dir: str, allow: str):
+    """Update the details, allowing or disallowing robots."""
+    details = load_details(profile_dir, allow_missing=True)
+    details['allow_robots'] = allow == 'allow'
+    with open(_get_details_path(profile_dir), 'w',
+              encoding='utf-8') as details_handle:
+        json.dump(details, details_handle)
+
 
 
 def load_posts(  # pylint: disable=R0914
@@ -990,6 +1017,14 @@ def _main(args: typing.List[str]):
         'reconcile',
         help='Bring posts into line with template/data changes.')
 
+    set_title = subparsers.add_parser('set_title',
+                                      help="Set the blog's title.")
+    set_title.add_argument('title')
+
+    set_robots = subparsers.add_parser('set_robots',
+                                       help='Allow or disallow web crawlers.')
+    set_robots.add_argument('allow', choices=['allow', 'disallow'])
+
     parsed_args = parser.parse_args(args[1:])
 
     profile_dir = os.path.expanduser('~/.biblogual')
@@ -1015,6 +1050,10 @@ def _main(args: typing.List[str]):
         posts_data = load_posts(profile_dir, blog_details, language_mappings)
         check_html_dir_valid(profile_dir)
         update_posts(posts_data, dest_dir, blog_details, language_mappings)
+    elif parsed_args.action == 'set_title':
+        set_blog_title(profile_dir, parsed_args.title)
+    elif parsed_args.action == 'set_robots':
+        set_robots_allowed(profile_dir, parsed_args.allow)
 
 
 if __name__ == '__main__':
