@@ -935,10 +935,13 @@ def get_initial_section_data(tempdir: str,
             lang_file.split('/')[-1]].placeholders
         with open(lang_file, 'w', encoding='utf-8') as handle:
             handle.writelines([
-                lang_text['title'],
-                lang_text['text'],
+                lang_text['title'] + '\n',
+                lang_text['text'] + '\n',
             ])
-    subprocess.call(f"vim {file1} -S <(echo 'vs {file2}')")
+    vim_script_path = os.path.join(tempdir, 'sidebyside')
+    with open(vim_script_path, 'w', encoding='utf-8') as vim_script_handle:
+        vim_script_handle.write(f'vs {file2}')
+    subprocess.call(["vim", file1, "-S", vim_script_path])
 
     sections: typing.List[SectionData] = [
         {
