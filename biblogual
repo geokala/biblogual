@@ -807,8 +807,19 @@ def check_language_mappings(profile_dir: str):
 
     lang_count = len(lang_files)
     if lang_count != 2:
+        repo_langs = ['dk', 'en']
+
+        get_helps = ''
+        repo_base = 'test_posts/langs'
+        for lang in repo_langs:
+            lang_path = os.path.join(repo_base, lang + '.json')
+            dest_path = os.path.join(profile_dir, 'langs', lang + '.json')
+            get_helps += _get_cp_or_curl(lang_path, dest_path)
+
         raise InvalidLangCount(
-            f"Expected 2 languages in {lang_dir}, found {lang_count}.")
+            f"Expected 2 languages in {lang_dir}, found {lang_count}.\n"
+            "To use languages from the repo, run two of the following:\n"
+            f"{get_helps}")
 
 
 def check_details(profile_dir: str):
