@@ -3,7 +3,6 @@ Objectives:
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
 
 Steps:
-  - Check post creation works
   - Run one or more accessibility tests on test site.
 
 Later:

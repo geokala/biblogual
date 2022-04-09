@@ -885,7 +885,7 @@ def get_custom_mood(language_mappings: typing.Dict[str, Language]
         for lang in sorted(moods):
             lang_name = language_mappings[lang].words['name']
             moods[lang] = input(f'Enter {lang_name} mood:').strip()
-        if get_user_confirmation():
+        if not get_user_confirmation():
             moods = {lang: '' for lang in language_mappings}
     order = sorted(moods.keys())
     return moods[order[0]], moods[order[1]]
@@ -904,8 +904,10 @@ def get_mood(language_mappings: typing.Dict[str, Language]
     selection = 0
     print('Select mood:')
     for num, mood in enumerate(moods):
-        print(display_template.format(num, mood[0], mood[1]))
-        print('{}: Custom'.format(len(moods)))  # pylint: disable=C0209
+        print(display_template.format(num=num,
+                                      lang1=mood[0],
+                                      lang2=mood[1]))
+    print('{}: Custom'.format(len(moods)))  # pylint: disable=C0209
     while not selection:
         try:
             selection = int(input('Select mood: '))
@@ -967,7 +969,7 @@ def get_initial_section_data(tempdir: str,
     return sections
 
 
-def make_post(posts_path: str,
+def make_post(profile_dir: str, dest_dir: str,  # pylint: disable=R0914
               language_mappings: typing.Dict[str, Language]):
     """Make a new post"""
     new_post: PostData = {
@@ -1006,9 +1008,20 @@ def make_post(posts_path: str,
         post_num += 1
         post_file = f'{date}-{post_num}.{suffix}'
 
-    with open(os.path.join(posts_path, post_file), 'w',
+    with open(os.path.join(_get_posts_path(profile_dir), post_file), 'w',
               encoding='utf-8') as post_handle:
         json.dump(new_post, post_handle)
+    reconcile(profile_dir, dest_dir, language_mappings)
+
+
+def reconcile(profile_dir: str, dest_dir: str,
+              language_mappings: typing.Dict[str, Language]):
+    """Ensure the current html matches the defined posts/etc."""
+    check_details(profile_dir)
+    blog_details = load_details(profile_dir)
+    posts_data = load_posts(profile_dir, blog_details, language_mappings)
+    check_html_dir_valid(profile_dir)
+    update_posts(posts_data, dest_dir, blog_details, language_mappings)
 
 
 def _main(args: typing.List[str]):
@@ -1057,18 +1070,13 @@ def _main(args: typing.List[str]):
         sys.exit(1)
 
     if parsed_args.action == 'make_post':
-        make_post(profile_dir, language_mappings)
+        make_post(profile_dir, dest_dir, language_mappings)
     elif parsed_args.action == 'reconcile':
-        check_details(profile_dir)
-        blog_details = load_details(profile_dir)
-        posts_data = load_posts(profile_dir, blog_details, language_mappings)
-        check_html_dir_valid(profile_dir)
-        update_posts(posts_data, dest_dir, blog_details, language_mappings)
+        reconcile(profile_dir, dest_dir, language_mappings)
     elif parsed_args.action == 'set_title':
         set_blog_title(profile_dir, parsed_args.title)
     elif parsed_args.action == 'set_robots':
         set_robots_allowed(profile_dir, parsed_args.allow)
-
 
 if __name__ == '__main__':
     _main(sys.argv)
