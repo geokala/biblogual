@@ -4,6 +4,16 @@ Objectives:
 
 Steps:
   - Run one or more accessibility tests on test site.
+  - Get mood numbering seems off.
+  - Not prompting to create dirs if html_dir not existing.
+  - Bootstrap files being targeted on profile dir?
+  - Symlink index.html to latest
+  - Rename current index.html (menu.html? top.html?)
+  - Acc: Set lang attribute on page to first language(<html lang="en">), and on every inserted language component based on its language code.
+  - Acc: Add skip navigation link: https://webaim.org/techniques/skipnav/
+  - Acc: No first level heading
+  - Acc: Set page regions or ARIA landmarks (?) https://webaim.org/standards/wcag/checklist#sc1.3.1
+  - Acc: Set page regions or ARIA landmarks (?) https://webaim.org/standards/wcag/checklist#sc2.4.1
 
 Later:
   RSS
