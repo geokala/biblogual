@@ -19,7 +19,7 @@ DISABLED_NAVBAR_LINK_ATTRS = \
     'style="cursor:default" class="text-muted navbar-brand"'
 # pylint: disable=C0301
 POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="{first_lang}">
 <head profile="http://www.w3.org/2005/10/profile">
 <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 <title>{blog_title}</title>
@@ -43,7 +43,7 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 </body>
 </html>'''
 INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="{{first_lang}}">
 <head profile="http://www.w3.org/2005/10/profile">
 <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 <title>{{blog_title}}</title>
@@ -66,7 +66,7 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 </body>
 </html>'''
 YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="{{first_lang}}">
 <head profile="http://www.w3.org/2005/10/profile">
 <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 <title>{{blog_title}} - {{year}}</title>
@@ -215,7 +215,7 @@ class Section:  # pylint: disable=R0903,R0902
         else:
             links_text = ''
         return (
-            '<div class="ml-5 float-md-left">\n'
+            f'<div class="ml-5 float-md-left" lang="{self.language}">\n'
             f'<h2>{self.flag}{self.title}</h2>\n'
             f'{mood_string}'
             f'<p>{self.text}</p>\n'
@@ -256,6 +256,7 @@ class Post:  # pylint: disable=R0903,R0902
             next_post=self.next_path,
             next_attrs=_get_header_link_attrs(self.next_path),
             blog_title=self.blog_title,
+            first_lang=sorted(self.language_mappings)[0],
             **get_navigation_link_text(self.language_mappings)
         )
 
@@ -285,6 +286,7 @@ class Year:
             post_links1=self._get_post_links_html(self.languages[0]),
             post_links2=self._get_post_links_html(self.languages[1]),
             blog_title=self.blog_title,
+            first_lang=sorted(self.language_mappings)[0],
             **get_navigation_link_text(self.language_mappings)
         )
 
@@ -358,6 +360,7 @@ class Index:
             first_post=self.first_path,
             year_links=self._get_year_links_html(),
             blog_title=self.blog_title,
+            first_lang=sorted(self.language_mappings)[0],
             **get_navigation_link_text(self.language_mappings)
         )
 
@@ -398,13 +401,14 @@ class BlogDetails(TypedDict):
 
 def get_navigation_link_text(language_mappings):
     """Get the link text for navigation."""
-    return {
-        nav_name: '/'.join([
-            language_mappings[lang].words[nav_name].upper()
-            for lang in sorted(language_mappings)
-        ])
-        for nav_name in ['first', 'previous', 'next', 'latest']
-    }
+    links = {}
+    for nav_name in ['first', 'previous', 'next', 'latest']:
+        nav_parts = []
+        for lang in sorted(language_mappings):
+            text = language_mappings[lang].words[nav_name].upper()
+            nav_parts.append(f'<span lang="{lang}">{text}</span>')
+        links[nav_name] = '/'.join(nav_parts)
+    return links
 
 
 def _get_date_string(date: datetime, language: str,
