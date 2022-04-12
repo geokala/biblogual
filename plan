@@ -7,7 +7,6 @@ Steps:
   - Bootstrap files being targeted on profile dir?
   - Symlink index.html to latest
   - Rename current index.html (menu.html? top.html?)
-  - Acc: Add skip navigation link: https://webaim.org/techniques/skipnav/
 
 Later:
   RSS
