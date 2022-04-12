@@ -29,6 +29,7 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
       href="favicon">
 </head>
 <body>
+<header>
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{first_post}" class="navbar-brand"><strong>{first}</strong></a>
 <a id="prev-link" href="{prev_post}" {prev_attrs}><strong>{previous}</strong></a>
@@ -36,10 +37,13 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 <a id="next-link" href="{next_post}" {next_attrs}><strong>{next}</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>{latest}</strong></a>
 </div>
+</header>
+<main>
 <div class="container-fluid clearfix">
 {section1}
 {section2}
 </div>
+</main>
 </body>
 </html>'''
 INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -53,6 +57,7 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
       href="favicon">
 </head>
 <body>
+<header>
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>{{first}}</strong></a>
 <a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{previous}}</strong></a>
@@ -60,9 +65,12 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 <a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{next}}</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>{{latest}}</strong></a>
 </div>
+</header>
+<main>
 <div class="container-fluid clearfix">
 {{year_links}}
 </div>
+</main>
 </body>
 </html>'''
 YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -76,6 +84,7 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
       href="favicon">
 </head>
 <body>
+<header>
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>{{first}}</strong></a>
 <a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{previous}}</strong></a>
@@ -83,10 +92,13 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 <a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{next}}</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>{{latest}}</strong></a>
 </div>
+</header>
+<main>
 <div class="container-fluid clearfix">
 {{post_links1}}
 {{post_links2}}
 </div>
+</main>
 </body>
 </html>'''
 # pylint: enable=C0301
