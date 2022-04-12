@@ -9,7 +9,6 @@ Steps:
   - Symlink index.html to latest
   - Rename current index.html (menu.html? top.html?)
   - Acc: Add skip navigation link: https://webaim.org/techniques/skipnav/
-  - Acc: No first level heading
   - Acc: Set page regions or ARIA landmarks (?) https://webaim.org/standards/wcag/checklist#sc1.3.1
   - Acc: Set page regions or ARIA landmarks (?) https://webaim.org/standards/wcag/checklist#sc2.4.1
 

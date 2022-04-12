@@ -32,7 +32,7 @@ POST_TEMPLATE = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{first_post}" class="navbar-brand"><strong>{first}</strong></a>
 <a id="prev-link" href="{prev_post}" {prev_attrs}><strong>{previous}</strong></a>
-<a id="home-link" href="index.html" class="navbar-brand"><strong>{blog_title}</strong></a>
+<a id="home-link" href="index.html" class="navbar-brand"><h1><small>{blog_title}</small></h1></a>
 <a id="next-link" href="{next_post}" {next_attrs}><strong>{next}</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>{latest}</strong></a>
 </div>
@@ -56,7 +56,7 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>{{first}}</strong></a>
 <a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{previous}}</strong></a>
-<a id="home-link" href="index.html" class="navbar-brand"><strong>{{blog_title}}</strong></a>
+<a id="home-link" href="index.html" class="navbar-brand"><h1><small>{{blog_title}}</small></h1></a>
 <a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{next}}</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>{{latest}}</strong></a>
 </div>
@@ -79,7 +79,7 @@ YEAR_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//E
 <div class="navbar navbar-dark bg-dark">
 <a id="first-link" href="{{first_post}}" class="navbar-brand"><strong>{{first}}</strong></a>
 <a id="prev-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{previous}}</strong></a>
-<a id="home-link" href="index.html" class="navbar-brand"><strong>{{blog_title}}</strong></a>
+<a id="home-link" href="index.html" class="navbar-brand"><h1><small>{{blog_title}}</small></h1></a>
 <a id="next-link" href="#" {DISABLED_NAVBAR_LINK_ATTRS}><strong>{{next}}</strong></a>
 <a id="latest-link" href="latest.html" class="navbar-brand"><strong>{{latest}}</strong></a>
 </div>
