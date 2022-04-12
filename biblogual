@@ -907,21 +907,21 @@ def get_mood(language_mappings: typing.Dict[str, Language]
 
     selection = 0
     print('Select mood:')
-    for num, mood in enumerate(moods):
+    for num, mood in enumerate(moods, start=1):
         print(display_template.format(num=num,
                                       lang1=mood[0],
                                       lang2=mood[1]))
-    print('{}: Custom'.format(len(moods)))  # pylint: disable=C0209
+    print('{}: Custom'.format(len(moods) + 1))  # pylint: disable=C0209
     while not selection:
         try:
             selection = int(input('Select mood: '))
         except ValueError:
             selection = 0
 
-        if selection < 1 or selection > len(moods):
+        if selection < 1 or selection > len(moods) + 1:
             selection = 0
         else:
-            if selection == len(moods):
+            if selection == len(moods) + 1:
                 return get_custom_mood(language_mappings)
     return moods[selection - 1]
 
