@@ -3,8 +3,6 @@ Objectives:
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
 
 Steps:
-  - Not prompting to create dirs if html_dir not existing.
-  - Bootstrap files being targeted on profile dir?
   - Symlink index.html to latest
   - Rename current index.html (menu.html? top.html?)
 

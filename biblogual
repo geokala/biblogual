@@ -1036,7 +1036,7 @@ def reconcile(profile_dir: str, dest_dir: str,
     check_details(profile_dir)
     blog_details = load_details(profile_dir)
     posts_data = load_posts(profile_dir, blog_details, language_mappings)
-    check_html_dir_valid(profile_dir)
+    check_html_dir_valid(dest_dir)
     update_posts(posts_data, dest_dir, blog_details, language_mappings)
 
 
