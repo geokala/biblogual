@@ -68,6 +68,10 @@ INDEX_TEMPLATE = f'''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//
 </header>
 <main>
 <div class="container-fluid clearfix">
+<br />
+<a id="body-latest-link" href="latest.html"><strong>{{latest}}</strong></a>
+<br />
+<br />
 {{year_links}}
 </div>
 </main>

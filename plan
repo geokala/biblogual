@@ -2,10 +2,6 @@ Objectives:
 - User writes the danish and the english.
 - Generate by running /usr/local/bin/post; if web dir isn't writable, scream with appropriately helpful message (e.g. chown -R madda:www /var/www/htdocs/madda/pub)
 
-Steps:
-  - Symlink index.html to latest
-  - Rename current index.html (menu.html? top.html?)
-
 Later:
   RSS
   Handle images (one can be added to post, will appear at top)
